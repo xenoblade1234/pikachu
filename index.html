@@ -1,13 +1,262 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pikachu</title>
+    <title>Pikachu Massage — Wellness-Massage zum Loslassen</title>
+    <meta name="description" content="Pikachu Massage: klassische Entspannungs-, Tiefengewebe- und Aromaölmassage. 60–90 Minuten ganz für dich." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340;0,9..144,480;0,9..144,600;1,9..144,440&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div id="app"></div>
+    <header class="site-nav">
+      <div class="nav-inner">
+        <a class="wordmark" href="#top">Pikachu <span>Massage</span></a>
+        <nav class="nav-links" id="nav-links">
+          <a href="#behandlungen">Behandlungen</a>
+          <a href="#ablauf">Ablauf</a>
+          <a href="#ueber-mich">Über mich</a>
+          <a href="#kontakt">Kontakt</a>
+          <a class="btn btn-primary btn-small" href="#kontakt">Termin anfragen</a>
+        </nav>
+        <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Menü öffnen">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="top">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-inner">
+          <p class="eyebrow">Wellness-Massage</p>
+          <h1>Lass los.<br />Wir übernehmen<br />den Druck.</h1>
+          <p class="hero-lede">
+            Pikachu Massage verbindet klassische Grifftechniken mit einem Raum, der
+            Handyzeit vergessen lässt. 45 bis 90&nbsp;Minuten, ganz für dich.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#kontakt">Termin anfragen</a>
+            <a class="btn btn-ghost" href="#behandlungen">Behandlungen ansehen</a>
+          </div>
+          <div class="pressure-legend">
+            <span class="pressure-legend-label">Druckskala</span>
+            <div class="pressure-item">
+              <div class="pressure-scale" data-level="1" role="img" aria-label="Druckstufe leicht">
+                <i></i><i></i><i></i><i></i>
+              </div>
+              <span>leicht</span>
+            </div>
+            <div class="pressure-item">
+              <div class="pressure-scale" data-level="4" role="img" aria-label="Druckstufe tief">
+                <i></i><i></i><i></i><i></i>
+              </div>
+              <span>tief</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="services" id="behandlungen">
+        <p class="eyebrow">Behandlungen</p>
+        <h2>Für jede Verspannung der richtige Griff.</h2>
+        <p class="section-lede">
+          Jede Behandlung zeigt ihre Druckstufe auf einen Blick — von federleicht bis
+          tief in die Muskulatur.
+        </p>
+
+        <div class="service-grid">
+          <article class="service-card">
+            <div class="service-head">
+              <h3>Klassische Entspannungsmassage</h3>
+              <span class="price">65&nbsp;€</span>
+            </div>
+            <p>
+              Sanfte, fließende Griffe lösen Verspannungen in Rücken, Nacken und
+              Schultern und bringen den Kreislauf zur Ruhe.
+            </p>
+            <div class="service-meta">
+              <span class="duration">60&nbsp;min</span>
+              <div class="pressure-scale" data-level="2" role="img" aria-label="Druckstufe leicht bis mittel">
+                <i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card">
+            <div class="service-head">
+              <h3>Tiefengewebe-Massage</h3>
+              <span class="price">80&nbsp;€</span>
+            </div>
+            <p>
+              Gezielter, fester Druck arbeitet tief in die Muskulatur — ideal bei
+              chronischen Verspannungen und einseitiger Belastung.
+            </p>
+            <div class="service-meta">
+              <span class="duration">60&nbsp;min</span>
+              <div class="pressure-scale" data-level="4" role="img" aria-label="Druckstufe tief">
+                <i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card">
+            <div class="service-head">
+              <h3>Aromaöl-Massage</h3>
+              <span class="price">85&nbsp;€</span>
+            </div>
+            <p>
+              Warmes Öl mit Lavendel und Eukalyptus begleitet lange, ruhige
+              Bewegungen — für Kopf und Körper gleichermaßen.
+            </p>
+            <div class="service-meta">
+              <span class="duration">75&nbsp;min</span>
+              <div class="pressure-scale" data-level="1" role="img" aria-label="Druckstufe leicht">
+                <i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card">
+            <div class="service-head">
+              <h3>Hot-Stone-Massage</h3>
+              <span class="price">105&nbsp;€</span>
+            </div>
+            <p>
+              Warme Basaltsteine lösen tiefe Verspannungen, ohne dass viel Druck
+              nötig ist — die Wärme übernimmt die Arbeit.
+            </p>
+            <div class="service-meta">
+              <span class="duration">90&nbsp;min</span>
+              <div class="pressure-scale" data-level="3" role="img" aria-label="Druckstufe mittel bis fest">
+                <i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card">
+            <div class="service-head">
+              <h3>Schwangerschaftsmassage</h3>
+              <span class="price">60&nbsp;€</span>
+            </div>
+            <p>
+              Seitlagerung und sanfte Griffe nehmen Druck von Rücken und Beinen —
+              abgestimmt auf jedes Trimester.
+            </p>
+            <div class="service-meta">
+              <span class="duration">45&nbsp;min</span>
+              <div class="pressure-scale" data-level="1" role="img" aria-label="Druckstufe leicht">
+                <i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="experience" id="ablauf">
+        <p class="eyebrow">Ablauf</p>
+        <h2>Eine Stunde, die sich entschleunigt.</h2>
+        <ol class="steps">
+          <li>
+            <span class="step-index">01</span>
+            <h3>Ankommen</h3>
+            <p>Tee, ein kurzes Gespräch: Wo drückt es, was soll heute in Ruhe gelassen werden?</p>
+          </li>
+          <li>
+            <span class="step-index">02</span>
+            <h3>Einstimmen</h3>
+            <p>Warme Decke, gedämpftes Licht — der Atem wird von allein langsamer.</p>
+          </li>
+          <li>
+            <span class="step-index">03</span>
+            <h3>Behandlung</h3>
+            <p>Grifftechnik und Druck richten sich nach dir, nicht nach einem festen Programm.</p>
+          </li>
+          <li>
+            <span class="step-index">04</span>
+            <h3>Nachklang</h3>
+            <p>Ein paar Minuten Ruhe mit Tee und Wasser, bevor der Alltag zurückkommt.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="about" id="ueber-mich">
+        <div class="about-grid">
+          <div class="about-portrait" aria-hidden="true"></div>
+          <div class="about-text">
+            <p class="eyebrow">Über mich</p>
+            <h2>Berührung mit Aufmerksamkeit.</h2>
+            <p>
+              Seit acht Jahren arbeite ich mit Händen, die genau spüren, wo sich
+              Anspannung festsetzt. Jede Behandlung beginnt mit Zuhören — erst dann
+              mit Druck.
+            </p>
+            <p class="quote">
+              „Massage ist kein Luxus, den man sich gönnt, wenn Zeit übrig ist. Sie
+              ist der Moment, in dem der Körper endlich antworten darf.“
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="testimonials">
+        <p class="eyebrow">Stimmen</p>
+        <div class="testimonial-grid">
+          <blockquote>
+            <p>„Ich komme verspannt rein und gehe raus, als hätte jemand den Ton leiser gedreht.“</p>
+            <cite>Nina R.</cite>
+          </blockquote>
+          <blockquote>
+            <p>„Die Hot-Stone-Behandlung hat meinen Rücken gerettet — nach Jahren am Schreibtisch.“</p>
+            <cite>Jonas K.</cite>
+          </blockquote>
+          <blockquote>
+            <p>„Endlich eine Massage, bei der der Druck wirklich zu mir passt, nicht zu einem Standardprogramm.“</p>
+            <cite>Sabrina L.</cite>
+          </blockquote>
+        </div>
+      </section>
+
+      <section class="kontakt" id="kontakt">
+        <div class="kontakt-grid">
+          <div>
+            <p class="eyebrow">Kontakt</p>
+            <h2>Bereit, loszulassen?</h2>
+            <p>
+              Schreib mir kurz, wann es passt — ich melde mich innerhalb eines Tages
+              mit freien Terminen zurück.
+            </p>
+            <a class="btn btn-primary" href="mailto:info@pikachu-massage.de">Termin anfragen</a>
+          </div>
+          <dl class="kontakt-details">
+            <div>
+              <dt>Telefon</dt>
+              <dd>[Telefonnummer eintragen]</dd>
+            </div>
+            <div>
+              <dt>E-Mail</dt>
+              <dd>info@pikachu-massage.de</dd>
+            </div>
+            <div>
+              <dt>Adresse</dt>
+              <dd>[Straße Nr., PLZ Ort]</dd>
+            </div>
+            <div>
+              <dt>Öffnungszeiten</dt>
+              <dd>Di–Fr 10–19 Uhr<br />Sa 10–14 Uhr</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span class="wordmark">Pikachu <span>Massage</span></span>
+      <p>© 2026 Pikachu Massage</p>
+    </footer>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
