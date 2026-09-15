@@ -155,56 +155,36 @@
   .year-toggle.is-preview { color: var(--accent-a); }
   .year-toggle.is-preview .year-caret { transform: rotate(180deg); color: var(--accent-a); }
 
-  .year-col {
+  .theme-col {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
+    align-items: flex-start;
+    gap: 5px;
   }
 
-  .jobstart-mini {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding-right: 8px;
-  }
-  .jobstart-mini-label {
+  .jobstart-chip {
+    font-family: inherit;
     font-size: 9.5px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--muted);
-    cursor: pointer;
-  }
-  .jobstart-mini-input {
-    font-family: inherit;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    font-size: 10.5px;
-    border: 1px solid var(--card-border);
-    border-radius: 6px;
     background: color-mix(in srgb, var(--track) 50%, transparent);
-    color: var(--text);
-    padding: 2px 3px;
-    max-width: 96px;
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    padding: 3px 9px;
+    margin-left: 2px;
     cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
-  .jobstart-mini-input:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 1px; }
-  .jobstart-mini-input.has-value { color: var(--accent-a); border-color: color-mix(in srgb, var(--accent-a) 45%, var(--card-border)); }
-
-  .jobstart-mini-clear {
-    border: none;
-    background: none;
-    color: var(--muted);
-    font-size: 10px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 2px;
-    flex: none;
+  .jobstart-chip:hover { color: var(--text); }
+  .jobstart-chip:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 2px; }
+  .jobstart-chip[hidden] { display: none; }
+  .jobstart-chip[aria-pressed="true"] {
+    color: var(--accent-a);
+    border-color: color-mix(in srgb, var(--accent-a) 45%, var(--card-border));
+    background: color-mix(in srgb, var(--accent-a) 14%, transparent);
   }
-  .jobstart-mini-clear:hover { color: var(--text); }
-  .jobstart-mini-clear:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 1px; }
-  .jobstart-mini-clear[hidden] { display: none; }
 
   .preview-badge {
     margin: 8px 0 0;
@@ -532,20 +512,16 @@
 
 <main class="card" aria-live="polite">
   <div class="top-row">
-    <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
-      <span class="theme-emoji" id="themeEmoji" aria-hidden="true">☀️</span>
-    </button>
-    <div class="year-col">
-      <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
-        <span id="year">–</span>
-        <span class="year-caret" aria-hidden="true">›</span>
+    <div class="theme-col">
+      <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
+        <span class="theme-emoji" id="themeEmoji" aria-hidden="true">☀️</span>
       </button>
-      <div class="jobstart-mini">
-        <label class="jobstart-mini-label" for="startDateInput">Jobstart</label>
-        <input type="date" id="startDateInput" class="jobstart-mini-input" />
-        <button type="button" class="jobstart-mini-clear" id="jobstartClear" aria-label="Jobstart zurücksetzen" hidden>✕</button>
-      </div>
+      <button type="button" class="jobstart-chip" id="jobstartToggle" aria-pressed="false" hidden>Jobstart</button>
     </div>
+    <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
+      <span id="year">–</span>
+      <span class="year-caret" aria-hidden="true">›</span>
+    </button>
   </div>
 
   <div class="preview-badge-wrap">
@@ -639,7 +615,7 @@
   var FRIDAY_KEY = "arbeitstage-dashboard:noFriday";
   var VACATION_ENABLED_KEY = "arbeitstage-dashboard:vacationEnabled";
   var VACATION_MAP_KEY = "arbeitstage-dashboard:vacationDays";
-  var START_DATE_MAP_KEY = "arbeitstage-dashboard:startDate";
+  var JOBSTART_ENABLED_KEY = "arbeitstage-dashboard:jobstartEnabled";
   var RING_CIRCUMFERENCE = 2 * Math.PI * 88;
 
   var els = {
@@ -664,8 +640,7 @@
     vacationMinus: document.getElementById("vacationMinus"),
     vacationPlus: document.getElementById("vacationPlus"),
     startDateNote: document.getElementById("startDateNote"),
-    startDateInput: document.getElementById("startDateInput"),
-    jobstartClear: document.getElementById("jobstartClear"),
+    jobstartToggle: document.getElementById("jobstartToggle"),
     footer: document.getElementById("footer"),
     holidayBackdrop: document.getElementById("holidayBackdrop"),
     holidayList: document.getElementById("holidayList"),
@@ -818,34 +793,16 @@
     saveVacationMap(map);
   }
 
-  // Vorbelegte Jobstart-Termine, falls der Nutzer noch keinen eigenen gespeichert hat.
-  var DEFAULT_START_DATES = { 2026: "2026-03-02" };
+  // Fixer, nicht editierbarer Jobstart pro Jahr.
+  var FIXED_JOB_STARTS = { 2026: "2026-03-02" };
 
-  function loadStartDateMap() {
+  function loadJobstartEnabled() {
     try {
-      return JSON.parse(localStorage.getItem(START_DATE_MAP_KEY) || "{}");
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function saveStartDateMap(map) {
-    try {
-      localStorage.setItem(START_DATE_MAP_KEY, JSON.stringify(map));
+      var v = localStorage.getItem(JOBSTART_ENABLED_KEY);
+      if (v === "1") return true;
+      if (v === "0") return false;
     } catch (e) { /* localStorage nicht verfügbar */ }
-  }
-
-  // Leerer String = vom Nutzer bewusst deaktiviert (ganzes Jahr). Noch nie gesetzt = Default greift.
-  function getStartDateString(year) {
-    var map = loadStartDateMap();
-    if (Object.prototype.hasOwnProperty.call(map, year)) return map[year];
-    return DEFAULT_START_DATES[year] || "";
-  }
-
-  function setStartDateString(year, value) {
-    var map = loadStartDateMap();
-    map[year] = value || "";
-    saveStartDateMap(map);
+    return true; // Standardmäßig aktiv, der Jobstart hat ja bereits stattgefunden.
   }
 
   function parseDateInput(str, year) {
@@ -866,13 +823,10 @@
     var referenceDate = viewOffset === 0 ? actualToday : new Date(year, 0, 1);
     var noFriday = els.fridayToggle.checked;
 
-    var startDateStr = getStartDateString(year);
-    els.startDateInput.min = year + "-01-01";
-    els.startDateInput.max = year + "-12-31";
-    els.startDateInput.value = startDateStr;
-    var startDateEnabled = !!startDateStr;
-    els.startDateInput.classList.toggle("has-value", startDateEnabled);
-    var yearStart = startDateEnabled ? parseDateInput(startDateStr, year) : null;
+    var fixedStart = FIXED_JOB_STARTS[year];
+    els.jobstartToggle.hidden = !fixedStart;
+    var startDateEnabled = !!fixedStart && els.jobstartToggle.getAttribute("aria-pressed") === "true";
+    var yearStart = startDateEnabled ? parseDateInput(fixedStart, year) : null;
     var s = computeStats(year, referenceDate, noFriday, yearStart);
 
     activeYear = year;
@@ -901,7 +855,6 @@
       els.vacationNote.hidden = true;
     }
 
-    els.jobstartClear.hidden = !startDateEnabled;
     if (startDateEnabled) {
       els.startDateNote.hidden = false;
       els.startDateNote.textContent = "Seit " + yearStart.toLocaleDateString("de-AT", { day: "numeric", month: "long" }) + " im Job";
@@ -996,13 +949,12 @@
 
   applyTheme(loadTheme());
 
-  // --- Jobstart (klein unter dem Jahr) ---
-  els.startDateInput.addEventListener("change", function () {
-    setStartDateString(activeYear, els.startDateInput.value);
-    render();
-  });
-  els.jobstartClear.addEventListener("click", function () {
-    setStartDateString(activeYear, "");
+  // --- Jobstart-Toggle (klein unter dem Dark-Mode-Button) ---
+  els.jobstartToggle.setAttribute("aria-pressed", String(loadJobstartEnabled()));
+  els.jobstartToggle.addEventListener("click", function () {
+    var next = els.jobstartToggle.getAttribute("aria-pressed") !== "true";
+    els.jobstartToggle.setAttribute("aria-pressed", String(next));
+    saveBool(JOBSTART_ENABLED_KEY, next);
     render();
   });
 
