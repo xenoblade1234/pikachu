@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Arbeitstage Wien</title>
+<meta name="description" content="Wie viele Arbeitstage in Wien noch übrig sind – auf einen Blick." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%86%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg-1: #eef1f7;
+    --bg-2: #dfe4ef;
+    --card-bg: rgba(255, 255, 255, 0.72);
+    --card-border: rgba(255, 255, 255, 0.6);
+    --text: #14161f;
+    --muted: #6b7080;
+    --track: rgba(20, 22, 31, 0.08);
+    --accent-a: #6c5ce7;
+    --accent-b: #00c2a8;
+    --shadow: 0 20px 60px -20px rgba(30, 34, 60, 0.35), 0 2px 8px rgba(30, 34, 60, 0.06);
+    --switch-off: rgba(20, 22, 31, 0.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-1: #0f1117;
+      --bg-2: #171a24;
+      --card-bg: rgba(28, 31, 42, 0.65);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f3f4f8;
+      --muted: #9498a8;
+      --track: rgba(255, 255, 255, 0.09);
+      --shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+      --switch-off: rgba(255, 255, 255, 0.14);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    padding-block: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+    padding-inline: 20px;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, color-mix(in srgb, var(--accent-a) 16%, transparent), transparent),
+      radial-gradient(1000px 600px at 110% 10%, color-mix(in srgb, var(--accent-b) 14%, transparent), transparent),
+      linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 28px;
+    padding: 30px 28px 26px;
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-shadow: var(--shadow);
+    animation: rise 0.5s cubic-bezier(.2,.8,.2,1);
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px) scale(0.99); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin-bottom: 6px;
+  }
+
+  .location { display: flex; align-items: center; gap: 6px; }
+
+  .ring-wrap {
+    position: relative;
+    width: min(240px, 62vw);
+    height: min(240px, 62vw);
+    margin: 14px auto 6px;
+  }
+
+  .ring { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+
+  .ring-track {
+    fill: none;
+    stroke: var(--track);
+    stroke-width: 11;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: url(#ringGradient);
+    stroke-width: 11;
+    stroke-linecap: round;
+    stroke-dasharray: 552.9;
+    stroke-dashoffset: 552.9;
+    transition: stroke-dashoffset 0.9s cubic-bezier(.2,.8,.2,1);
+  }
+
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 10px;
+  }
+
+  .big-number {
+    font-size: clamp(40px, 12vw, 58px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .big-label {
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 18px 0 20px;
+  }
+
+  .stat {
+    text-align: center;
+    padding: 12px 6px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--track) 55%, transparent);
+  }
+
+  .stat-value {
+    font-size: 19px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .stat-label {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 13px 14px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--track) 55%, transparent);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle-text { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-title { font-size: 13.5px; font-weight: 700; }
+  .toggle-sub { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+  .switch { position: relative; width: 46px; height: 27px; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .slider {
+    position: absolute; inset: 0;
+    background: var(--switch-off);
+    border-radius: 999px;
+    transition: background 0.25s ease;
+  }
+  .slider::before {
+    content: "";
+    position: absolute;
+    width: 21px; height: 21px;
+    left: 3px; top: 3px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: transform 0.25s cubic-bezier(.2,.8,.2,1);
+  }
+  .switch input:checked + .slider {
+    background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  }
+  .switch input:checked + .slider::before {
+    transform: translateX(19px);
+  }
+  .switch input:focus-visible + .slider {
+    outline: 2px solid var(--accent-a);
+    outline-offset: 2px;
+  }
+
+  .footer {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  @media (max-width: 380px) {
+    .card { padding: 24px 18px 20px; border-radius: 24px; }
+    .stat-label { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6c5ce7" />
+      <stop offset="100%" stop-color="#00c2a8" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<main class="card" aria-live="polite">
+  <div class="top-row">
+    <span class="location">📍 Wien, AT</span>
+    <span id="year"></span>
+  </div>
+
+  <div class="ring-wrap">
+    <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+      <circle class="ring-track" cx="100" cy="100" r="88" />
+      <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="88" />
+    </svg>
+    <div class="ring-center">
+      <div class="big-number" id="bigNumber">–</div>
+      <div class="big-label">Arbeitstage übrig</div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="stat-value" id="statPassed">–</div>
+      <div class="stat-label">Arbeitstage vergangen</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statCalendar">–</div>
+      <div class="stat-label">Kalendertage übrig</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statPercent">–</div>
+      <div class="stat-label">Arbeitsjahr geschafft</div>
+    </div>
+  </div>
+
+  <label class="toggle-row" for="fridayToggle">
+    <span class="toggle-text">
+      <span class="toggle-title">Freitage nicht mitzählen</span>
+      <span class="toggle-sub">4-Tage-Woche · Feiertage bleiben immer frei</span>
+    </span>
+    <span class="switch">
+      <input type="checkbox" id="fridayToggle" />
+      <span class="slider"></span>
+    </span>
+  </label>
+
+  <p class="footer" id="footer">Stand: –</p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "arbeitstage-dashboard:noFriday";
+  var RING_CIRCUMFERENCE = 2 * Math.PI * 88;
+
+  var els = {
+    year: document.getElementById("year"),
+    bigNumber: document.getElementById("bigNumber"),
+    statPassed: document.getElementById("statPassed"),
+    statCalendar: document.getElementById("statCalendar"),
+    statPercent: document.getElementById("statPercent"),
+    ring: document.getElementById("ringProgress"),
+    toggle: document.getElementById("fridayToggle"),
+    footer: document.getElementById("footer")
+  };
+
+  function startOfDay(d) {
+    var n = new Date(d);
+    n.setHours(0, 0, 0, 0);
+    return n;
+  }
+
+  function addDays(date, days) {
+    var d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+  }
+
+  function dateKey(d) {
+    return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  }
+
+  // Gauss'sche Osterformel
+  function easterSunday(year) {
+    var a = year % 19;
+    var b = Math.floor(year / 100);
+    var c = year % 100;
+    var d = Math.floor(b / 4);
+    var e = b % 4;
+    var f = Math.floor((b + 8) / 25);
+    var g = Math.floor((b - f + 1) / 3);
+    var h = (19 * a + b - d - g + 15) % 30;
+    var i = Math.floor(c / 4);
+    var k = c % 4;
+    var l = (32 + 2 * e + 2 * i - h - k) % 7;
+    var m = Math.floor((a + 11 * h + 22 * l) / 451);
+    var month = Math.floor((h + l - 7 * m + 114) / 31);
+    var day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month - 1, day);
+  }
+
+  // Bundesweit gültige österreichische Feiertage (gelten damit auch in Wien)
+  function austrianHolidays(year) {
+    var easter = easterSunday(year);
+    return [
+      new Date(year, 0, 1),    // Neujahr
+      new Date(year, 0, 6),    // Heilige Drei Könige
+      addDays(easter, 1),      // Ostermontag
+      new Date(year, 4, 1),    // Staatsfeiertag
+      addDays(easter, 39),     // Christi Himmelfahrt
+      addDays(easter, 50),     // Pfingstmontag
+      addDays(easter, 60),     // Fronleichnam
+      new Date(year, 7, 15),   // Mariä Himmelfahrt
+      new Date(year, 9, 26),   // Nationalfeiertag
+      new Date(year, 10, 1),   // Allerheiligen
+      new Date(year, 11, 8),   // Mariä Empfängnis
+      new Date(year, 11, 25),  // Christtag
+      new Date(year, 11, 26)   // Stefanitag
+    ];
+  }
+
+  function computeStats(today, noFriday) {
+    var year = today.getFullYear();
+    var jan1 = new Date(year, 0, 1);
+    var dec31 = new Date(year, 11, 31);
+    var holidaySet = {};
+    austrianHolidays(year).forEach(function (d) { holidaySet[dateKey(d)] = true; });
+
+    function isWorkday(d) {
+      var day = d.getDay();
+      if (day === 0 || day === 6) return false;
+      if (noFriday && day === 5) return false;
+      if (holidaySet[dateKey(d)]) return false;
+      return true;
+    }
+
+    var total = 0, passed = 0, remaining = 0;
+    for (var d = new Date(jan1); d <= dec31; d = addDays(d, 1)) {
+      if (isWorkday(d)) {
+        total++;
+        if (d < today) passed++;
+        else remaining++;
+      }
+    }
+
+    var calendarDaysRemaining = Math.max(0, Math.round((dec31 - today) / 86400000));
+    var percent = total > 0 ? (passed / total) * 100 : 0;
+
+    return {
+      year: year,
+      total: total,
+      passed: passed,
+      remaining: remaining,
+      calendarDaysRemaining: calendarDaysRemaining,
+      percent: percent
+    };
+  }
+
+  function loadToggleState() {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function saveToggleState(value) {
+    try {
+      localStorage.setItem(STORAGE_KEY, value ? "1" : "0");
+    } catch (e) { /* localStorage nicht verfügbar */ }
+  }
+
+  var fmt = function (n) { return n.toLocaleString("de-AT"); };
+
+  function render() {
+    var today = startOfDay(new Date());
+    var noFriday = els.toggle.checked;
+    var s = computeStats(today, noFriday);
+
+    els.year.textContent = String(s.year);
+    els.bigNumber.textContent = fmt(s.remaining);
+    els.statPassed.textContent = fmt(s.passed);
+    els.statCalendar.textContent = fmt(s.calendarDaysRemaining);
+    els.statPercent.textContent = s.percent.toFixed(0) + " %";
+
+    var offset = RING_CIRCUMFERENCE * (1 - s.percent / 100);
+    els.ring.style.strokeDasharray = String(RING_CIRCUMFERENCE);
+    els.ring.style.strokeDashoffset = String(offset);
+
+    els.footer.textContent = "Stand: " + today.toLocaleDateString("de-AT", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric"
+    });
+  }
+
+  els.toggle.checked = loadToggleState();
+  els.toggle.addEventListener("change", function () {
+    saveToggleState(els.toggle.checked);
+    render();
+  });
+
+  render();
+
+  // Tägliche automatische Aktualisierung: Datumwechsel erkennen, ohne manuelles Neuladen.
+  var lastRenderedDay = new Date().toDateString();
+  setInterval(function () {
+    var now = new Date().toDateString();
+    if (now !== lastRenderedDay) {
+      lastRenderedDay = now;
+      render();
+    }
+  }, 60 * 1000);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      var now = new Date().toDateString();
+      if (now !== lastRenderedDay) {
+        lastRenderedDay = now;
+      }
+      render();
+    }
+  });
+})();
+</script>
+</body>
+</html>
