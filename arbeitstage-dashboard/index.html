@@ -98,7 +98,26 @@
     letter-spacing: 0.01em;
   }
 
-  .location { display: flex; align-items: center; gap: 6px; }
+  .icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border-radius: 50%;
+    border: 1px solid var(--card-border);
+    background: color-mix(in srgb, var(--track) 40%, transparent);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--track); }
+  .icon-btn:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 2px; }
+  .icon-btn:active { transform: scale(0.92); }
+
+  .theme-icon { display: block; }
+  .theme-icon[hidden] { display: none; }
 
   .year-toggle {
     display: flex;
@@ -450,7 +469,22 @@
 
 <main class="card" aria-live="polite">
   <div class="top-row">
-    <span class="location">📍 Wien, AT</span>
+    <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
+      <svg class="theme-icon" id="themeSun" hidden viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <line x1="12" y1="2" x2="12" y2="4" />
+        <line x1="12" y1="20" x2="12" y2="22" />
+        <line x1="4" y1="12" x2="2" y2="12" />
+        <line x1="22" y1="12" x2="20" y2="12" />
+        <line x1="19.07" y1="4.93" x2="17.66" y2="6.34" />
+        <line x1="6.34" y1="17.66" x2="4.93" y2="19.07" />
+        <line x1="19.07" y1="19.07" x2="17.66" y2="17.66" />
+        <line x1="6.34" y1="6.34" x2="4.93" y2="4.93" />
+      </svg>
+      <svg class="theme-icon" id="themeMoon" hidden viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z" />
+      </svg>
+    </button>
     <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
       <span id="year">–</span>
       <span class="year-caret" aria-hidden="true">›</span>
@@ -550,6 +584,9 @@
   var RING_CIRCUMFERENCE = 2 * Math.PI * 88;
 
   var els = {
+    themeToggle: document.getElementById("themeToggle"),
+    themeSun: document.getElementById("themeSun"),
+    themeMoon: document.getElementById("themeMoon"),
     year: document.getElementById("year"),
     yearToggle: document.getElementById("yearToggle"),
     previewBadge: document.getElementById("previewBadge"),
@@ -768,13 +805,72 @@
     els.vacationInput.value = String(getVacationDays(year));
 
     if (viewOffset === 0) {
-      els.footer.textContent = "Stand: " + actualToday.toLocaleDateString("de-AT", {
+      els.footer.textContent = "Wien, AT · Stand: " + actualToday.toLocaleDateString("de-AT", {
         weekday: "long", day: "numeric", month: "long", year: "numeric"
       });
     } else {
-      els.footer.textContent = "Vorschau-Modus für " + year + " · aktualisiert automatisch";
+      els.footer.textContent = "Wien, AT · Vorschau-Modus für " + year + " · aktualisiert automatisch";
     }
   }
+
+  // --- Dark-Mode-Toggle ---
+  var THEME_KEY = "arbeitstage-dashboard:theme";
+  var darkMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+  function loadTheme() {
+    try {
+      var v = localStorage.getItem(THEME_KEY);
+      return v === "dark" || v === "light" ? v : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveTheme(theme) {
+    try {
+      if (theme) {
+        localStorage.setItem(THEME_KEY, theme);
+      } else {
+        localStorage.removeItem(THEME_KEY);
+      }
+    } catch (e) { /* localStorage nicht verfügbar */ }
+  }
+
+  function systemPrefersDark() {
+    return !!(darkMediaQuery && darkMediaQuery.matches);
+  }
+
+  function effectiveIsDark(theme) {
+    return theme ? theme === "dark" : systemPrefersDark();
+  }
+
+  function applyTheme(theme) {
+    if (theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    var isDark = effectiveIsDark(theme);
+    els.themeSun.hidden = !isDark;
+    els.themeMoon.hidden = isDark;
+    els.themeToggle.setAttribute("aria-label", isDark ? "Light Mode aktivieren" : "Dark Mode aktivieren");
+  }
+
+  els.themeToggle.addEventListener("click", function () {
+    var next = effectiveIsDark(loadTheme()) ? "light" : "dark";
+    saveTheme(next);
+    applyTheme(next);
+  });
+
+  if (darkMediaQuery) {
+    var onSystemThemeChange = function () {
+      if (!loadTheme()) applyTheme(null);
+    };
+    if (darkMediaQuery.addEventListener) darkMediaQuery.addEventListener("change", onSystemThemeChange);
+    else if (darkMediaQuery.addListener) darkMediaQuery.addListener(onSystemThemeChange);
+  }
+
+  applyTheme(loadTheme());
 
   // --- Freitag-Toggle ---
   els.fridayToggle.checked = loadBool(FRIDAY_KEY);
