@@ -155,10 +155,10 @@
   .year-toggle.is-preview { color: var(--accent-a); }
   .year-toggle.is-preview .year-caret { transform: rotate(180deg); color: var(--accent-a); }
 
-  .theme-col {
+  .year-col {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: 5px;
   }
 
@@ -173,7 +173,7 @@
     border: 1px solid var(--card-border);
     border-radius: 999px;
     padding: 3px 9px;
-    margin-left: 2px;
+    margin-right: 8px;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
@@ -512,16 +512,16 @@
 
 <main class="card" aria-live="polite">
   <div class="top-row">
-    <div class="theme-col">
-      <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
-        <span class="theme-emoji" id="themeEmoji" aria-hidden="true">☀️</span>
+    <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
+      <span class="theme-emoji" id="themeEmoji" aria-hidden="true">☀️</span>
+    </button>
+    <div class="year-col">
+      <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
+        <span id="year">–</span>
+        <span class="year-caret" aria-hidden="true">›</span>
       </button>
       <button type="button" class="jobstart-chip" id="jobstartToggle" aria-pressed="false" hidden>Jobstart</button>
     </div>
-    <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
-      <span id="year">–</span>
-      <span class="year-caret" aria-hidden="true">›</span>
-    </button>
   </div>
 
   <div class="preview-badge-wrap">
