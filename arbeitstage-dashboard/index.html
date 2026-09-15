@@ -96,16 +96,53 @@
     color: var(--muted);
     font-weight: 600;
     letter-spacing: 0.01em;
-    margin-bottom: 6px;
   }
 
   .location { display: flex; align-items: center; gap: 6px; }
+
+  .year-toggle {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    border: none;
+    background: none;
+    font: inherit;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 3px 8px 3px 10px;
+    margin: -3px -8px -3px 0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .year-toggle:hover { background: var(--track); color: var(--text); }
+  .year-toggle:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 2px; }
+  .year-toggle .year-caret {
+    font-size: 11px;
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+  .year-toggle.is-preview { color: var(--accent-a); }
+  .year-toggle.is-preview .year-caret { transform: rotate(180deg); color: var(--accent-a); }
+
+  .preview-badge {
+    margin: 8px 0 0;
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent-a);
+    background: color-mix(in srgb, var(--accent-a) 14%, transparent);
+    border-radius: 999px;
+    padding: 5px 12px;
+    display: inline-block;
+  }
+  .preview-badge-wrap { text-align: center; }
+  .preview-badge-wrap[hidden] { display: none; }
 
   .ring-wrap {
     position: relative;
     width: min(240px, 62vw);
     height: min(240px, 62vw);
-    margin: 14px auto 6px;
+    margin: 14px auto 4px;
   }
 
   .ring { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
@@ -134,7 +171,7 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 0 10px;
+    padding: 0 14px;
   }
 
   .big-number {
@@ -158,18 +195,51 @@
     letter-spacing: 0.06em;
   }
 
+  .vacation-note {
+    margin-top: 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent-a);
+  }
+  .vacation-note[hidden] { display: none; }
+
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
     margin: 18px 0 20px;
   }
 
   .stat {
+    position: relative;
     text-align: center;
-    padding: 12px 6px;
+    padding: 13px 8px;
     border-radius: 16px;
     background: color-mix(in srgb, var(--track) 55%, transparent);
+  }
+
+  button.stat {
+    font-family: inherit;
+    color: inherit;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.stat:hover { background: color-mix(in srgb, var(--track) 90%, transparent); }
+  button.stat:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-a);
+  }
+
+  .stat-hint {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.55;
   }
 
   .stat-value {
@@ -185,6 +255,12 @@
     color: var(--muted);
     font-weight: 600;
     line-height: 1.25;
+  }
+
+  .toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .toggle-row {
@@ -232,6 +308,52 @@
     outline-offset: 2px;
   }
 
+  .stepper-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--track) 45%, transparent);
+  }
+  .stepper-row[hidden] { display: none; }
+  .stepper-row label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper button {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stepper button:hover { background: color-mix(in srgb, var(--accent-a) 16%, var(--card-bg)); }
+  .stepper button:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 2px; }
+  .stepper input {
+    width: 42px;
+    text-align: center;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 14px;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text);
+    padding: 4px 2px;
+  }
+  .stepper input:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 1px; }
+  .stepper input::-webkit-inner-spin-button,
+  .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
   .footer {
     margin-top: 16px;
     text-align: center;
@@ -239,6 +361,75 @@
     color: var(--muted);
     font-weight: 500;
   }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, black 55%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+    z-index: 50;
+  }
+  .modal-backdrop[hidden] { display: none; }
+
+  .modal {
+    width: 100%;
+    max-width: 340px;
+    max-height: 76vh;
+    overflow-y: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    padding: 20px 20px 16px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    animation: rise 0.3s cubic-bezier(.2,.8,.2,1);
+  }
+
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .modal-head h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .modal-close {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 15px;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex: none;
+  }
+  .modal-close:hover { background: var(--track); color: var(--text); }
+  .modal-close:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 2px; }
+
+  .holiday-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .holiday-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--track);
+  }
+  .holiday-item:last-child { border-bottom: none; }
+  .holiday-name { font-weight: 700; font-size: 13.5px; }
+  .holiday-date { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .holiday-empty { padding: 16px 2px; color: var(--muted); font-size: 13px; text-align: center; }
 
   @media (max-width: 380px) {
     .card { padding: 24px 18px 20px; border-radius: 24px; }
@@ -260,7 +451,14 @@
 <main class="card" aria-live="polite">
   <div class="top-row">
     <span class="location">📍 Wien, AT</span>
-    <span id="year"></span>
+    <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
+      <span id="year">–</span>
+      <span class="year-caret" aria-hidden="true">›</span>
+    </button>
+  </div>
+
+  <div class="preview-badge-wrap">
+    <span class="preview-badge" id="previewBadge" hidden></span>
   </div>
 
   <div class="ring-wrap">
@@ -271,6 +469,7 @@
     <div class="ring-center">
       <div class="big-number" id="bigNumber">–</div>
       <div class="big-label">Arbeitstage übrig</div>
+      <div class="vacation-note" id="vacationNote" hidden></div>
     </div>
   </div>
 
@@ -287,39 +486,98 @@
       <div class="stat-value" id="statPercent">–</div>
       <div class="stat-label">Arbeitsjahr geschafft</div>
     </div>
+    <button type="button" class="stat" id="statHolidaysButton" aria-haspopup="dialog">
+      <span class="stat-hint" aria-hidden="true">›</span>
+      <div class="stat-value" id="statHolidays">–</div>
+      <div class="stat-label">Feiertage übrig</div>
+    </button>
   </div>
 
-  <label class="toggle-row" for="fridayToggle">
-    <span class="toggle-text">
-      <span class="toggle-title">Freitage nicht mitzählen</span>
-      <span class="toggle-sub">4-Tage-Woche · Feiertage bleiben immer frei</span>
-    </span>
-    <span class="switch">
-      <input type="checkbox" id="fridayToggle" />
-      <span class="slider"></span>
-    </span>
-  </label>
+  <div class="toggles">
+    <label class="toggle-row" for="fridayToggle">
+      <span class="toggle-text">
+        <span class="toggle-title">Freitage nicht mitzählen</span>
+        <span class="toggle-sub">4-Tage-Woche · Feiertage bleiben immer frei</span>
+      </span>
+      <span class="switch">
+        <input type="checkbox" id="fridayToggle" />
+        <span class="slider"></span>
+      </span>
+    </label>
+
+    <div>
+      <label class="toggle-row" for="vacationToggle">
+        <span class="toggle-text">
+          <span class="toggle-title">Urlaubstage abziehen</span>
+          <span class="toggle-sub">Geplanten Resturlaub vom Zähler abziehen</span>
+        </span>
+        <span class="switch">
+          <input type="checkbox" id="vacationToggle" aria-controls="vacationStepper" />
+          <span class="slider"></span>
+        </span>
+      </label>
+      <div class="stepper-row" id="vacationStepper" hidden>
+        <label for="vacationInput">Resturlaub <span id="vacationYearLabel">–</span></label>
+        <div class="stepper">
+          <button type="button" id="vacationMinus" aria-label="Einen Urlaubstag weniger">−</button>
+          <input type="number" id="vacationInput" min="0" max="200" step="1" value="0" inputmode="numeric" />
+          <button type="button" id="vacationPlus" aria-label="Einen Urlaubstag mehr">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <p class="footer" id="footer">Stand: –</p>
 </main>
+
+<div class="modal-backdrop" id="holidayBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="holidayModalTitle">
+    <div class="modal-head">
+      <h2 id="holidayModalTitle">Feiertage <span id="modalYearLabel"></span></h2>
+      <button type="button" class="modal-close" id="holidayModalClose" aria-label="Schließen">✕</button>
+    </div>
+    <ul class="holiday-list" id="holidayList"></ul>
+  </div>
+</div>
 
 <script>
 (function () {
   "use strict";
 
-  var STORAGE_KEY = "arbeitstage-dashboard:noFriday";
+  var FRIDAY_KEY = "arbeitstage-dashboard:noFriday";
+  var VACATION_ENABLED_KEY = "arbeitstage-dashboard:vacationEnabled";
+  var VACATION_MAP_KEY = "arbeitstage-dashboard:vacationDays";
   var RING_CIRCUMFERENCE = 2 * Math.PI * 88;
 
   var els = {
     year: document.getElementById("year"),
+    yearToggle: document.getElementById("yearToggle"),
+    previewBadge: document.getElementById("previewBadge"),
     bigNumber: document.getElementById("bigNumber"),
+    vacationNote: document.getElementById("vacationNote"),
     statPassed: document.getElementById("statPassed"),
     statCalendar: document.getElementById("statCalendar"),
     statPercent: document.getElementById("statPercent"),
+    statHolidays: document.getElementById("statHolidays"),
+    statHolidaysButton: document.getElementById("statHolidaysButton"),
     ring: document.getElementById("ringProgress"),
-    toggle: document.getElementById("fridayToggle"),
-    footer: document.getElementById("footer")
+    fridayToggle: document.getElementById("fridayToggle"),
+    vacationToggle: document.getElementById("vacationToggle"),
+    vacationStepper: document.getElementById("vacationStepper"),
+    vacationYearLabel: document.getElementById("vacationYearLabel"),
+    vacationInput: document.getElementById("vacationInput"),
+    vacationMinus: document.getElementById("vacationMinus"),
+    vacationPlus: document.getElementById("vacationPlus"),
+    footer: document.getElementById("footer"),
+    holidayBackdrop: document.getElementById("holidayBackdrop"),
+    holidayList: document.getElementById("holidayList"),
+    holidayModalClose: document.getElementById("holidayModalClose"),
+    modalYearLabel: document.getElementById("modalYearLabel")
   };
+
+  var viewOffset = 0; // 0 = aktuelles Jahr, 1 = Vorschau nächstes Jahr
+  var activeYear = new Date().getFullYear();
+  var currentHolidaysRemaining = [];
 
   function startOfDay(d) {
     var n = new Date(d);
@@ -360,28 +618,28 @@
   function austrianHolidays(year) {
     var easter = easterSunday(year);
     return [
-      new Date(year, 0, 1),    // Neujahr
-      new Date(year, 0, 6),    // Heilige Drei Könige
-      addDays(easter, 1),      // Ostermontag
-      new Date(year, 4, 1),    // Staatsfeiertag
-      addDays(easter, 39),     // Christi Himmelfahrt
-      addDays(easter, 50),     // Pfingstmontag
-      addDays(easter, 60),     // Fronleichnam
-      new Date(year, 7, 15),   // Mariä Himmelfahrt
-      new Date(year, 9, 26),   // Nationalfeiertag
-      new Date(year, 10, 1),   // Allerheiligen
-      new Date(year, 11, 8),   // Mariä Empfängnis
-      new Date(year, 11, 25),  // Christtag
-      new Date(year, 11, 26)   // Stefanitag
+      { name: "Neujahr", date: new Date(year, 0, 1) },
+      { name: "Heilige Drei Könige", date: new Date(year, 0, 6) },
+      { name: "Ostermontag", date: addDays(easter, 1) },
+      { name: "Staatsfeiertag", date: new Date(year, 4, 1) },
+      { name: "Christi Himmelfahrt", date: addDays(easter, 39) },
+      { name: "Pfingstmontag", date: addDays(easter, 50) },
+      { name: "Fronleichnam", date: addDays(easter, 60) },
+      { name: "Mariä Himmelfahrt", date: new Date(year, 7, 15) },
+      { name: "Nationalfeiertag", date: new Date(year, 9, 26) },
+      { name: "Allerheiligen", date: new Date(year, 10, 1) },
+      { name: "Mariä Empfängnis", date: new Date(year, 11, 8) },
+      { name: "Christtag", date: new Date(year, 11, 25) },
+      { name: "Stefanitag", date: new Date(year, 11, 26) }
     ];
   }
 
-  function computeStats(today, noFriday) {
-    var year = today.getFullYear();
+  function computeStats(year, referenceDate, noFriday) {
     var jan1 = new Date(year, 0, 1);
     var dec31 = new Date(year, 11, 31);
+    var holidays = austrianHolidays(year);
     var holidaySet = {};
-    austrianHolidays(year).forEach(function (d) { holidaySet[dateKey(d)] = true; });
+    holidays.forEach(function (h) { holidaySet[dateKey(h.date)] = true; });
 
     function isWorkday(d) {
       var day = d.getDay();
@@ -395,13 +653,16 @@
     for (var d = new Date(jan1); d <= dec31; d = addDays(d, 1)) {
       if (isWorkday(d)) {
         total++;
-        if (d < today) passed++;
+        if (d < referenceDate) passed++;
         else remaining++;
       }
     }
 
-    var calendarDaysRemaining = Math.max(0, Math.round((dec31 - today) / 86400000));
+    var calendarDaysRemaining = Math.max(0, Math.round((dec31 - referenceDate) / 86400000));
     var percent = total > 0 ? (passed / total) * 100 : 0;
+    var holidaysRemaining = holidays
+      .filter(function (h) { return h.date >= referenceDate; })
+      .sort(function (a, b) { return a.date - b.date; });
 
     return {
       year: year,
@@ -409,50 +670,204 @@
       passed: passed,
       remaining: remaining,
       calendarDaysRemaining: calendarDaysRemaining,
-      percent: percent
+      percent: percent,
+      holidaysRemaining: holidaysRemaining
     };
   }
 
-  function loadToggleState() {
+  function loadBool(key) {
     try {
-      return localStorage.getItem(STORAGE_KEY) === "1";
+      return localStorage.getItem(key) === "1";
     } catch (e) {
       return false;
     }
   }
 
-  function saveToggleState(value) {
+  function saveBool(key, value) {
     try {
-      localStorage.setItem(STORAGE_KEY, value ? "1" : "0");
+      localStorage.setItem(key, value ? "1" : "0");
     } catch (e) { /* localStorage nicht verfügbar */ }
+  }
+
+  function loadVacationMap() {
+    try {
+      return JSON.parse(localStorage.getItem(VACATION_MAP_KEY) || "{}");
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveVacationMap(map) {
+    try {
+      localStorage.setItem(VACATION_MAP_KEY, JSON.stringify(map));
+    } catch (e) { /* localStorage nicht verfügbar */ }
+  }
+
+  function clampVacation(v) {
+    v = isNaN(v) ? 0 : v;
+    return Math.min(200, Math.max(0, Math.round(v)));
+  }
+
+  function getVacationDays(year) {
+    var map = loadVacationMap();
+    return clampVacation(map[year] || 0);
+  }
+
+  function setVacationDays(year, value) {
+    var map = loadVacationMap();
+    map[year] = clampVacation(value);
+    saveVacationMap(map);
   }
 
   var fmt = function (n) { return n.toLocaleString("de-AT"); };
 
   function render() {
-    var today = startOfDay(new Date());
-    var noFriday = els.toggle.checked;
-    var s = computeStats(today, noFriday);
+    var actualToday = startOfDay(new Date());
+    var actualYear = actualToday.getFullYear();
+    var year = actualYear + viewOffset;
+    var referenceDate = viewOffset === 0 ? actualToday : new Date(year, 0, 1);
+    var noFriday = els.fridayToggle.checked;
+    var s = computeStats(year, referenceDate, noFriday);
 
-    els.year.textContent = String(s.year);
-    els.bigNumber.textContent = fmt(s.remaining);
+    activeYear = year;
+    currentHolidaysRemaining = s.holidaysRemaining;
+
+    var vacationEnabled = els.vacationToggle.checked;
+    var vacationDays = vacationEnabled ? getVacationDays(year) : 0;
+    var effectiveRemaining = Math.max(0, s.remaining - vacationDays);
+
+    els.year.textContent = String(year);
+    els.yearToggle.classList.toggle("is-preview", viewOffset === 1);
+    els.yearToggle.setAttribute(
+      "aria-label",
+      viewOffset === 0 ? "Vorschau für " + (year + 1) + " anzeigen" : "Zurück zu " + actualYear
+    );
+    els.previewBadge.hidden = viewOffset === 0;
+    if (viewOffset === 1) {
+      els.previewBadge.textContent = "Vorschau " + year + " · Jahr hat noch nicht begonnen";
+    }
+
+    els.bigNumber.textContent = fmt(effectiveRemaining);
+    if (vacationEnabled && vacationDays > 0) {
+      els.vacationNote.hidden = false;
+      els.vacationNote.textContent = "– " + fmt(vacationDays) + " Urlaubstag" + (vacationDays === 1 ? "" : "e") + " eingeplant";
+    } else {
+      els.vacationNote.hidden = true;
+    }
+
     els.statPassed.textContent = fmt(s.passed);
     els.statCalendar.textContent = fmt(s.calendarDaysRemaining);
     els.statPercent.textContent = s.percent.toFixed(0) + " %";
+    els.statHolidays.textContent = fmt(s.holidaysRemaining.length);
 
     var offset = RING_CIRCUMFERENCE * (1 - s.percent / 100);
     els.ring.style.strokeDasharray = String(RING_CIRCUMFERENCE);
     els.ring.style.strokeDashoffset = String(offset);
 
-    els.footer.textContent = "Stand: " + today.toLocaleDateString("de-AT", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric"
-    });
+    els.vacationYearLabel.textContent = String(year);
+    els.vacationInput.value = String(getVacationDays(year));
+
+    if (viewOffset === 0) {
+      els.footer.textContent = "Stand: " + actualToday.toLocaleDateString("de-AT", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric"
+      });
+    } else {
+      els.footer.textContent = "Vorschau-Modus für " + year + " · aktualisiert automatisch";
+    }
   }
 
-  els.toggle.checked = loadToggleState();
-  els.toggle.addEventListener("change", function () {
-    saveToggleState(els.toggle.checked);
+  // --- Freitag-Toggle ---
+  els.fridayToggle.checked = loadBool(FRIDAY_KEY);
+  els.fridayToggle.addEventListener("change", function () {
+    saveBool(FRIDAY_KEY, els.fridayToggle.checked);
     render();
+  });
+
+  // --- Urlaubstage-Toggle ---
+  els.vacationToggle.checked = loadBool(VACATION_ENABLED_KEY);
+  els.vacationStepper.hidden = !els.vacationToggle.checked;
+  els.vacationToggle.setAttribute("aria-expanded", String(els.vacationToggle.checked));
+  els.vacationToggle.addEventListener("change", function () {
+    saveBool(VACATION_ENABLED_KEY, els.vacationToggle.checked);
+    els.vacationStepper.hidden = !els.vacationToggle.checked;
+    els.vacationToggle.setAttribute("aria-expanded", String(els.vacationToggle.checked));
+    render();
+  });
+  els.vacationInput.addEventListener("change", function () {
+    var v = clampVacation(parseInt(els.vacationInput.value, 10));
+    setVacationDays(activeYear, v);
+    render();
+  });
+  els.vacationMinus.addEventListener("click", function () {
+    setVacationDays(activeYear, getVacationDays(activeYear) - 1);
+    render();
+  });
+  els.vacationPlus.addEventListener("click", function () {
+    setVacationDays(activeYear, getVacationDays(activeYear) + 1);
+    render();
+  });
+
+  // --- Jahr-Umschalter ---
+  els.yearToggle.addEventListener("click", function () {
+    viewOffset = viewOffset === 0 ? 1 : 0;
+    render();
+  });
+
+  // --- Feiertage-Modal ---
+  var lastFocusedBeforeModal = null;
+
+  function onModalKeydown(e) {
+    if (e.key === "Escape") closeHolidayModal();
+  }
+
+  function openHolidayModal() {
+    lastFocusedBeforeModal = document.activeElement;
+    els.modalYearLabel.textContent = String(activeYear);
+    els.holidayList.innerHTML = "";
+
+    if (currentHolidaysRemaining.length === 0) {
+      var empty = document.createElement("li");
+      empty.className = "holiday-empty";
+      empty.textContent = "Keine Feiertage mehr in diesem Jahr.";
+      els.holidayList.appendChild(empty);
+    } else {
+      currentHolidaysRemaining.forEach(function (h) {
+        var li = document.createElement("li");
+        li.className = "holiday-item";
+
+        var name = document.createElement("span");
+        name.className = "holiday-name";
+        name.textContent = h.name;
+
+        var dateEl = document.createElement("span");
+        dateEl.className = "holiday-date";
+        var dayNum = h.date.getDay();
+        var label = h.date.toLocaleDateString("de-AT", { weekday: "short", day: "numeric", month: "long" });
+        dateEl.textContent = label + (dayNum === 0 || dayNum === 6 ? " · Wochenende" : "");
+
+        li.appendChild(name);
+        li.appendChild(dateEl);
+        els.holidayList.appendChild(li);
+      });
+    }
+
+    els.holidayBackdrop.hidden = false;
+    els.holidayModalClose.focus();
+    document.addEventListener("keydown", onModalKeydown);
+  }
+
+  function closeHolidayModal() {
+    els.holidayBackdrop.hidden = true;
+    document.removeEventListener("keydown", onModalKeydown);
+    if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === "function") {
+      lastFocusedBeforeModal.focus();
+    }
+  }
+
+  els.statHolidaysButton.addEventListener("click", openHolidayModal);
+  els.holidayModalClose.addEventListener("click", closeHolidayModal);
+  els.holidayBackdrop.addEventListener("click", function (e) {
+    if (e.target === els.holidayBackdrop) closeHolidayModal();
   });
 
   render();
@@ -469,10 +884,7 @@
 
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") {
-      var now = new Date().toDateString();
-      if (now !== lastRenderedDay) {
-        lastRenderedDay = now;
-      }
+      lastRenderedDay = new Date().toDateString();
       render();
     }
   });
