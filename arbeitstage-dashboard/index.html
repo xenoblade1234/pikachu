@@ -385,6 +385,19 @@
   .stepper input::-webkit-inner-spin-button,
   .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
+  .stepper-row input[type="date"] {
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 13px;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text);
+    padding: 5px 8px;
+  }
+  .stepper-row input[type="date"]:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 1px; }
+
   .footer {
     margin-top: 16px;
     text-align: center;
@@ -502,6 +515,7 @@
     <div class="ring-center">
       <div class="big-number" id="bigNumber">–</div>
       <div class="big-label">Arbeitstage übrig</div>
+      <div class="vacation-note" id="startDateNote" hidden></div>
       <div class="vacation-note" id="vacationNote" hidden></div>
     </div>
   </div>
@@ -527,6 +541,23 @@
   </div>
 
   <div class="toggles">
+    <div>
+      <label class="toggle-row" for="startDateToggle">
+        <span class="toggle-text">
+          <span class="toggle-title">Erst später gestartet</span>
+          <span class="toggle-sub">Arbeitsjahr ab einem eigenen Startdatum berechnen</span>
+        </span>
+        <span class="switch">
+          <input type="checkbox" id="startDateToggle" aria-controls="startDateRow" />
+          <span class="slider"></span>
+        </span>
+      </label>
+      <div class="stepper-row" id="startDateRow" hidden>
+        <label for="startDateInput">Jobstart <span id="startDateYearLabel">–</span></label>
+        <input type="date" id="startDateInput" />
+      </div>
+    </div>
+
     <label class="toggle-row" for="fridayToggle">
       <span class="toggle-text">
         <span class="toggle-title">Freitage nicht mitzählen</span>
@@ -580,6 +611,8 @@
   var FRIDAY_KEY = "arbeitstage-dashboard:noFriday";
   var VACATION_ENABLED_KEY = "arbeitstage-dashboard:vacationEnabled";
   var VACATION_MAP_KEY = "arbeitstage-dashboard:vacationDays";
+  var START_DATE_ENABLED_KEY = "arbeitstage-dashboard:startDateEnabled";
+  var START_DATE_MAP_KEY = "arbeitstage-dashboard:startDate";
   var RING_CIRCUMFERENCE = 2 * Math.PI * 88;
 
   var els = {
@@ -603,6 +636,11 @@
     vacationInput: document.getElementById("vacationInput"),
     vacationMinus: document.getElementById("vacationMinus"),
     vacationPlus: document.getElementById("vacationPlus"),
+    startDateNote: document.getElementById("startDateNote"),
+    startDateToggle: document.getElementById("startDateToggle"),
+    startDateRow: document.getElementById("startDateRow"),
+    startDateYearLabel: document.getElementById("startDateYearLabel"),
+    startDateInput: document.getElementById("startDateInput"),
     footer: document.getElementById("footer"),
     holidayBackdrop: document.getElementById("holidayBackdrop"),
     holidayList: document.getElementById("holidayList"),
@@ -669,9 +707,10 @@
     ];
   }
 
-  function computeStats(year, referenceDate, noFriday) {
+  function computeStats(year, referenceDate, noFriday, yearStart) {
     var jan1 = new Date(year, 0, 1);
     var dec31 = new Date(year, 11, 31);
+    if (yearStart && yearStart > jan1 && yearStart <= dec31) jan1 = yearStart;
     var holidays = austrianHolidays(year);
     var holidaySet = {};
     holidays.forEach(function (h) { holidaySet[dateKey(h.date)] = true; });
@@ -754,6 +793,55 @@
     saveVacationMap(map);
   }
 
+  // Vorbelegte Jobstart-Termine, falls der Nutzer noch keinen eigenen gespeichert hat.
+  var DEFAULT_START_DATES = { 2026: "2026-03-02" };
+
+  function loadStartDateMap() {
+    try {
+      return JSON.parse(localStorage.getItem(START_DATE_MAP_KEY) || "{}");
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveStartDateMap(map) {
+    try {
+      localStorage.setItem(START_DATE_MAP_KEY, JSON.stringify(map));
+    } catch (e) { /* localStorage nicht verfügbar */ }
+  }
+
+  function getStartDateString(year) {
+    var map = loadStartDateMap();
+    if (map[year]) return map[year];
+    if (DEFAULT_START_DATES[year]) return DEFAULT_START_DATES[year];
+    return year + "-01-01";
+  }
+
+  function setStartDateString(year, value) {
+    var map = loadStartDateMap();
+    map[year] = value;
+    saveStartDateMap(map);
+  }
+
+  function parseDateInput(str, year) {
+    var parts = String(str).split("-").map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      var d = new Date(parts[0], parts[1] - 1, parts[2]);
+      if (d.getFullYear() === year) return d;
+    }
+    return new Date(year, 0, 1);
+  }
+
+  function loadStartDateEnabled() {
+    try {
+      var v = localStorage.getItem(START_DATE_ENABLED_KEY);
+      if (v === "1") return true;
+      if (v === "0") return false;
+    } catch (e) { /* localStorage nicht verfügbar */ }
+    // Kein gespeicherter Wert: automatisch aktiv, wenn fürs aktuelle Jahr ein Jobstart hinterlegt ist.
+    return Object.prototype.hasOwnProperty.call(DEFAULT_START_DATES, new Date().getFullYear());
+  }
+
   var fmt = function (n) { return n.toLocaleString("de-AT"); };
 
   function render() {
@@ -762,7 +850,9 @@
     var year = actualYear + viewOffset;
     var referenceDate = viewOffset === 0 ? actualToday : new Date(year, 0, 1);
     var noFriday = els.fridayToggle.checked;
-    var s = computeStats(year, referenceDate, noFriday);
+    var startDateEnabled = els.startDateToggle.checked;
+    var yearStart = startDateEnabled ? parseDateInput(getStartDateString(year), year) : null;
+    var s = computeStats(year, referenceDate, noFriday, yearStart);
 
     activeYear = year;
     currentHolidaysRemaining = s.holidaysRemaining;
@@ -790,6 +880,14 @@
       els.vacationNote.hidden = true;
     }
 
+    var startDateIsCustom = startDateEnabled && (yearStart.getMonth() !== 0 || yearStart.getDate() !== 1);
+    if (startDateIsCustom) {
+      els.startDateNote.hidden = false;
+      els.startDateNote.textContent = "Seit " + yearStart.toLocaleDateString("de-AT", { day: "numeric", month: "long" }) + " im Job";
+    } else {
+      els.startDateNote.hidden = true;
+    }
+
     els.statPassed.textContent = fmt(s.passed);
     els.statCalendar.textContent = fmt(s.calendarDaysRemaining);
     els.statPercent.textContent = s.percent.toFixed(0) + " %";
@@ -801,6 +899,11 @@
 
     els.vacationYearLabel.textContent = String(year);
     els.vacationInput.value = String(getVacationDays(year));
+
+    els.startDateYearLabel.textContent = String(year);
+    els.startDateInput.min = year + "-01-01";
+    els.startDateInput.max = year + "-12-31";
+    els.startDateInput.value = getStartDateString(year);
 
     if (viewOffset === 0) {
       els.footer.textContent = "Wien, AT · Stand: " + actualToday.toLocaleDateString("de-AT", {
@@ -876,6 +979,21 @@
   }
 
   applyTheme(loadTheme());
+
+  // --- Jobstart-Toggle ---
+  els.startDateToggle.checked = loadStartDateEnabled();
+  els.startDateRow.hidden = !els.startDateToggle.checked;
+  els.startDateToggle.setAttribute("aria-expanded", String(els.startDateToggle.checked));
+  els.startDateToggle.addEventListener("change", function () {
+    saveBool(START_DATE_ENABLED_KEY, els.startDateToggle.checked);
+    els.startDateRow.hidden = !els.startDateToggle.checked;
+    els.startDateToggle.setAttribute("aria-expanded", String(els.startDateToggle.checked));
+    render();
+  });
+  els.startDateInput.addEventListener("change", function () {
+    if (els.startDateInput.value) setStartDateString(activeYear, els.startDateInput.value);
+    render();
+  });
 
   // --- Freitag-Toggle ---
   els.fridayToggle.checked = loadBool(FRIDAY_KEY);
