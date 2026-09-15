@@ -22,7 +22,7 @@
     --switch-off: rgba(20, 22, 31, 0.14);
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg-1: #0f1117;
       --bg-2: #171a24;
       --card-bg: rgba(28, 31, 42, 0.65);
@@ -33,6 +33,17 @@
       --shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
       --switch-off: rgba(255, 255, 255, 0.14);
     }
+  }
+  :root[data-theme="dark"] {
+    --bg-1: #0f1117;
+    --bg-2: #171a24;
+    --card-bg: rgba(28, 31, 42, 0.65);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text: #f3f4f8;
+    --muted: #9498a8;
+    --track: rgba(255, 255, 255, 0.09);
+    --shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --switch-off: rgba(255, 255, 255, 0.14);
   }
 
   * { box-sizing: border-box; }
