@@ -155,6 +155,57 @@
   .year-toggle.is-preview { color: var(--accent-a); }
   .year-toggle.is-preview .year-caret { transform: rotate(180deg); color: var(--accent-a); }
 
+  .year-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+  }
+
+  .jobstart-mini {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 8px;
+  }
+  .jobstart-mini-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .jobstart-mini-input {
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 10.5px;
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--track) 50%, transparent);
+    color: var(--text);
+    padding: 2px 3px;
+    max-width: 96px;
+    cursor: pointer;
+  }
+  .jobstart-mini-input:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 1px; }
+  .jobstart-mini-input.has-value { color: var(--accent-a); border-color: color-mix(in srgb, var(--accent-a) 45%, var(--card-border)); }
+
+  .jobstart-mini-clear {
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px;
+    flex: none;
+  }
+  .jobstart-mini-clear:hover { color: var(--text); }
+  .jobstart-mini-clear:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 1px; }
+  .jobstart-mini-clear[hidden] { display: none; }
+
   .preview-badge {
     margin: 8px 0 0;
     text-align: center;
@@ -385,19 +436,6 @@
   .stepper input::-webkit-inner-spin-button,
   .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
-  .stepper-row input[type="date"] {
-    font-family: inherit;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    font-size: 13px;
-    border: 1px solid var(--card-border);
-    border-radius: 8px;
-    background: var(--card-bg);
-    color: var(--text);
-    padding: 5px 8px;
-  }
-  .stepper-row input[type="date"]:focus-visible { outline: 2px solid var(--accent-a); outline-offset: 1px; }
-
   .footer {
     margin-top: 16px;
     text-align: center;
@@ -497,10 +535,17 @@
     <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
       <span class="theme-emoji" id="themeEmoji" aria-hidden="true">☀️</span>
     </button>
-    <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
-      <span id="year">–</span>
-      <span class="year-caret" aria-hidden="true">›</span>
-    </button>
+    <div class="year-col">
+      <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
+        <span id="year">–</span>
+        <span class="year-caret" aria-hidden="true">›</span>
+      </button>
+      <div class="jobstart-mini">
+        <label class="jobstart-mini-label" for="startDateInput">Jobstart</label>
+        <input type="date" id="startDateInput" class="jobstart-mini-input" />
+        <button type="button" class="jobstart-mini-clear" id="jobstartClear" aria-label="Jobstart zurücksetzen" hidden>✕</button>
+      </div>
+    </div>
   </div>
 
   <div class="preview-badge-wrap">
@@ -541,23 +586,6 @@
   </div>
 
   <div class="toggles">
-    <div>
-      <label class="toggle-row" for="startDateToggle">
-        <span class="toggle-text">
-          <span class="toggle-title">Erst später gestartet</span>
-          <span class="toggle-sub">Arbeitsjahr ab einem eigenen Startdatum berechnen</span>
-        </span>
-        <span class="switch">
-          <input type="checkbox" id="startDateToggle" aria-controls="startDateRow" />
-          <span class="slider"></span>
-        </span>
-      </label>
-      <div class="stepper-row" id="startDateRow" hidden>
-        <label for="startDateInput">Jobstart <span id="startDateYearLabel">–</span></label>
-        <input type="date" id="startDateInput" />
-      </div>
-    </div>
-
     <label class="toggle-row" for="fridayToggle">
       <span class="toggle-text">
         <span class="toggle-title">Freitage nicht mitzählen</span>
@@ -611,7 +639,6 @@
   var FRIDAY_KEY = "arbeitstage-dashboard:noFriday";
   var VACATION_ENABLED_KEY = "arbeitstage-dashboard:vacationEnabled";
   var VACATION_MAP_KEY = "arbeitstage-dashboard:vacationDays";
-  var START_DATE_ENABLED_KEY = "arbeitstage-dashboard:startDateEnabled";
   var START_DATE_MAP_KEY = "arbeitstage-dashboard:startDate";
   var RING_CIRCUMFERENCE = 2 * Math.PI * 88;
 
@@ -637,10 +664,8 @@
     vacationMinus: document.getElementById("vacationMinus"),
     vacationPlus: document.getElementById("vacationPlus"),
     startDateNote: document.getElementById("startDateNote"),
-    startDateToggle: document.getElementById("startDateToggle"),
-    startDateRow: document.getElementById("startDateRow"),
-    startDateYearLabel: document.getElementById("startDateYearLabel"),
     startDateInput: document.getElementById("startDateInput"),
+    jobstartClear: document.getElementById("jobstartClear"),
     footer: document.getElementById("footer"),
     holidayBackdrop: document.getElementById("holidayBackdrop"),
     holidayList: document.getElementById("holidayList"),
@@ -810,16 +835,16 @@
     } catch (e) { /* localStorage nicht verfügbar */ }
   }
 
+  // Leerer String = vom Nutzer bewusst deaktiviert (ganzes Jahr). Noch nie gesetzt = Default greift.
   function getStartDateString(year) {
     var map = loadStartDateMap();
-    if (map[year]) return map[year];
-    if (DEFAULT_START_DATES[year]) return DEFAULT_START_DATES[year];
-    return year + "-01-01";
+    if (Object.prototype.hasOwnProperty.call(map, year)) return map[year];
+    return DEFAULT_START_DATES[year] || "";
   }
 
   function setStartDateString(year, value) {
     var map = loadStartDateMap();
-    map[year] = value;
+    map[year] = value || "";
     saveStartDateMap(map);
   }
 
@@ -832,16 +857,6 @@
     return new Date(year, 0, 1);
   }
 
-  function loadStartDateEnabled() {
-    try {
-      var v = localStorage.getItem(START_DATE_ENABLED_KEY);
-      if (v === "1") return true;
-      if (v === "0") return false;
-    } catch (e) { /* localStorage nicht verfügbar */ }
-    // Kein gespeicherter Wert: automatisch aktiv, wenn fürs aktuelle Jahr ein Jobstart hinterlegt ist.
-    return Object.prototype.hasOwnProperty.call(DEFAULT_START_DATES, new Date().getFullYear());
-  }
-
   var fmt = function (n) { return n.toLocaleString("de-AT"); };
 
   function render() {
@@ -850,8 +865,14 @@
     var year = actualYear + viewOffset;
     var referenceDate = viewOffset === 0 ? actualToday : new Date(year, 0, 1);
     var noFriday = els.fridayToggle.checked;
-    var startDateEnabled = els.startDateToggle.checked;
-    var yearStart = startDateEnabled ? parseDateInput(getStartDateString(year), year) : null;
+
+    var startDateStr = getStartDateString(year);
+    els.startDateInput.min = year + "-01-01";
+    els.startDateInput.max = year + "-12-31";
+    els.startDateInput.value = startDateStr;
+    var startDateEnabled = !!startDateStr;
+    els.startDateInput.classList.toggle("has-value", startDateEnabled);
+    var yearStart = startDateEnabled ? parseDateInput(startDateStr, year) : null;
     var s = computeStats(year, referenceDate, noFriday, yearStart);
 
     activeYear = year;
@@ -880,8 +901,8 @@
       els.vacationNote.hidden = true;
     }
 
-    var startDateIsCustom = startDateEnabled && (yearStart.getMonth() !== 0 || yearStart.getDate() !== 1);
-    if (startDateIsCustom) {
+    els.jobstartClear.hidden = !startDateEnabled;
+    if (startDateEnabled) {
       els.startDateNote.hidden = false;
       els.startDateNote.textContent = "Seit " + yearStart.toLocaleDateString("de-AT", { day: "numeric", month: "long" }) + " im Job";
     } else {
@@ -899,11 +920,6 @@
 
     els.vacationYearLabel.textContent = String(year);
     els.vacationInput.value = String(getVacationDays(year));
-
-    els.startDateYearLabel.textContent = String(year);
-    els.startDateInput.min = year + "-01-01";
-    els.startDateInput.max = year + "-12-31";
-    els.startDateInput.value = getStartDateString(year);
 
     if (viewOffset === 0) {
       els.footer.textContent = "Wien, AT · Stand: " + actualToday.toLocaleDateString("de-AT", {
@@ -980,18 +996,13 @@
 
   applyTheme(loadTheme());
 
-  // --- Jobstart-Toggle ---
-  els.startDateToggle.checked = loadStartDateEnabled();
-  els.startDateRow.hidden = !els.startDateToggle.checked;
-  els.startDateToggle.setAttribute("aria-expanded", String(els.startDateToggle.checked));
-  els.startDateToggle.addEventListener("change", function () {
-    saveBool(START_DATE_ENABLED_KEY, els.startDateToggle.checked);
-    els.startDateRow.hidden = !els.startDateToggle.checked;
-    els.startDateToggle.setAttribute("aria-expanded", String(els.startDateToggle.checked));
+  // --- Jobstart (klein unter dem Jahr) ---
+  els.startDateInput.addEventListener("change", function () {
+    setStartDateString(activeYear, els.startDateInput.value);
     render();
   });
-  els.startDateInput.addEventListener("change", function () {
-    if (els.startDateInput.value) setStartDateString(activeYear, els.startDateInput.value);
+  els.jobstartClear.addEventListener("click", function () {
+    setStartDateString(activeYear, "");
     render();
   });
 
