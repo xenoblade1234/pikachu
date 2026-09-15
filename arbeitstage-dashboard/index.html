@@ -119,6 +119,27 @@
   .theme-icon { display: block; }
   .theme-icon[hidden] { display: none; }
 
+  .theme-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .theme-emoji {
+    font-size: 18px;
+    line-height: 1;
+    display: inline-block;
+  }
+  @keyframes emoji-pop {
+    0% { transform: scale(0.35) rotate(-18deg); opacity: 0; }
+    65% { transform: scale(1.18) rotate(6deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  .theme-emoji.pop { animation: emoji-pop 0.4s cubic-bezier(.2,.8,.2,1); }
+  @media (prefers-reduced-motion: reduce) {
+    .theme-emoji.pop { animation: none; }
+  }
+
   .year-toggle {
     display: flex;
     align-items: center;
@@ -469,22 +490,25 @@
 
 <main class="card" aria-live="polite">
   <div class="top-row">
-    <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
-      <svg class="theme-icon" id="themeSun" hidden viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="4" />
-        <line x1="12" y1="2" x2="12" y2="4" />
-        <line x1="12" y1="20" x2="12" y2="22" />
-        <line x1="4" y1="12" x2="2" y2="12" />
-        <line x1="22" y1="12" x2="20" y2="12" />
-        <line x1="19.07" y1="4.93" x2="17.66" y2="6.34" />
-        <line x1="6.34" y1="17.66" x2="4.93" y2="19.07" />
-        <line x1="19.07" y1="19.07" x2="17.66" y2="17.66" />
-        <line x1="6.34" y1="6.34" x2="4.93" y2="4.93" />
-      </svg>
-      <svg class="theme-icon" id="themeMoon" hidden viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z" />
-      </svg>
-    </button>
+    <span class="theme-control">
+      <button type="button" class="icon-btn theme-toggle" id="themeToggle" aria-label="Dark Mode aktivieren">
+        <svg class="theme-icon" id="themeSun" hidden viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <line x1="12" y1="2" x2="12" y2="4" />
+          <line x1="12" y1="20" x2="12" y2="22" />
+          <line x1="4" y1="12" x2="2" y2="12" />
+          <line x1="22" y1="12" x2="20" y2="12" />
+          <line x1="19.07" y1="4.93" x2="17.66" y2="6.34" />
+          <line x1="6.34" y1="17.66" x2="4.93" y2="19.07" />
+          <line x1="19.07" y1="19.07" x2="17.66" y2="17.66" />
+          <line x1="6.34" y1="6.34" x2="4.93" y2="4.93" />
+        </svg>
+        <svg class="theme-icon" id="themeMoon" hidden viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z" />
+        </svg>
+      </button>
+      <span class="theme-emoji" id="themeEmoji" aria-hidden="true">☀️</span>
+    </span>
     <button type="button" class="year-toggle" id="yearToggle" aria-label="Vorschau für nächstes Jahr anzeigen">
       <span id="year">–</span>
       <span class="year-caret" aria-hidden="true">›</span>
@@ -587,6 +611,7 @@
     themeToggle: document.getElementById("themeToggle"),
     themeSun: document.getElementById("themeSun"),
     themeMoon: document.getElementById("themeMoon"),
+    themeEmoji: document.getElementById("themeEmoji"),
     year: document.getElementById("year"),
     yearToggle: document.getElementById("yearToggle"),
     previewBadge: document.getElementById("previewBadge"),
@@ -854,6 +879,15 @@
     els.themeSun.hidden = !isDark;
     els.themeMoon.hidden = isDark;
     els.themeToggle.setAttribute("aria-label", isDark ? "Light Mode aktivieren" : "Dark Mode aktivieren");
+
+    var nextEmoji = isDark ? "🌙" : "☀️";
+    if (els.themeEmoji.textContent !== nextEmoji) {
+      els.themeEmoji.textContent = nextEmoji;
+      els.themeEmoji.classList.remove("pop");
+      // Reflow erzwingen, damit die Animation bei erneutem Wechsel neu startet.
+      void els.themeEmoji.offsetWidth;
+      els.themeEmoji.classList.add("pop");
+    }
   }
 
   els.themeToggle.addEventListener("click", function () {
