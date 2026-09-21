@@ -551,7 +551,7 @@
     </div>
     <div class="stat">
       <div class="stat-value" id="statPercent">–</div>
-      <div class="stat-label">Arbeitsjahr geschafft</div>
+      <div class="stat-label" id="statPercentLabel">Arbeitsjahr geschafft</div>
     </div>
     <button type="button" class="stat" id="statHolidaysButton" aria-haspopup="dialog">
       <span class="stat-hint" aria-hidden="true">›</span>
@@ -628,6 +628,7 @@
     statPassed: document.getElementById("statPassed"),
     statCalendar: document.getElementById("statCalendar"),
     statPercent: document.getElementById("statPercent"),
+    statPercentLabel: document.getElementById("statPercentLabel"),
     statHolidays: document.getElementById("statHolidays"),
     statHolidaysButton: document.getElementById("statHolidaysButton"),
     ring: document.getElementById("ringProgress"),
@@ -864,6 +865,7 @@
     els.statPassed.textContent = fmt(s.passed);
     els.statCalendar.textContent = fmt(s.calendarDaysRemaining);
     els.statPercent.textContent = s.percent.toFixed(0) + " %";
+    els.statPercentLabel.textContent = startDateEnabled ? "Arbeitsjahr geschafft (seit Jobstart)" : "Arbeitsjahr geschafft";
     els.statHolidays.textContent = fmt(s.holidaysRemaining.length);
 
     var offset = RING_CIRCUMFERENCE * (1 - s.percent / 100);
