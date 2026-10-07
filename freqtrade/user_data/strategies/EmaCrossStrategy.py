@@ -8,7 +8,7 @@ import talib.abstract as ta
 from pandas import DataFrame
 
 from freqtrade.strategy import IntParameter, IStrategy
-from freqtrade.vendor.qtpylib import indicators as qtpylib
+from technical import qtpylib
 
 
 class EmaCrossStrategy(IStrategy):
