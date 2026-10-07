@@ -1,0 +1,5 @@
+.env
+user_data/*
+!user_data/config.json
+!user_data/strategies/
+user_data/strategies/__pycache__/
