@@ -30,6 +30,7 @@ if [ ! -f .env ]; then
 fi
 
 mkdir -p user_data/logs
+./download_nfi.sh
 sudo docker compose pull
 sudo docker compose up -d
 

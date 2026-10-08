@@ -3,3 +3,5 @@ user_data/*
 !user_data/config.json
 !user_data/strategies/
 user_data/strategies/__pycache__/
+!user_data/compare.py
+user_data/strategies/NostalgiaForInfinity*.py
