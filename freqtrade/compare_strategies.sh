@@ -15,8 +15,8 @@ echo "== Lade Kursdaten ($DAYS Tage + Vorlauf für Indikatoren) =="
 $FT freqtrade download-data --config /freqtrade/user_data/config.json \
   --timeframes 5m 15m 1h 4h 1d --days $((DAYS + 250))
 
-rm -rf user_data/backtest_results/compare
-mkdir -p user_data/backtest_results/compare
+sudo rm -rf user_data/backtest_results/compare
+sudo install -d -o 1000 -g 1000 user_data/backtest_results/compare
 START=$(date -d "-$DAYS days" +%Y%m%d)
 for S in "${STRATEGIES[@]}"; do
   echo "== Backtest: $S =="
