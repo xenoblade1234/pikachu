@@ -1,0 +1,1592 @@
+<title>Personal Debate Hub</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: fixed study-desk sidebar (navigation, storage status) + scrolling reading column; detail and editors open in a right-hand drawer. Dark-only by design. */
+:root{
+  --bg:#12151b; --panel:#181c24; --panel-2:#1e232d; --line:#2a303b; --line-2:#3a4150;
+  --ink:#e9e4d8; --ink-2:#c4c0b5; --muted:#8f95a2; --faint:#646b78;
+  --brass:#c9a55e; --brass-ink:#17120a; --brass-soft:rgba(201,165,94,.13);
+  --pro:#82b5a9; --pro-soft:rgba(130,181,169,.14); --contra:#d4846f; --contra-soft:rgba(212,132,111,.14);
+  --warn:#d9a648; --good:#93c08b; --bad:#d4846f;
+  --s1:#c9a55e; --s2:#82b5a9; --s3:#d4846f; --s4:#a39fd8; --s5:#6fa6d2; --s6:#a9bd6f; --s7:#d7a0c0;
+  --f-display:'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --f-ui:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --r:6px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-ui);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--brass)}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:500;margin:0;text-wrap:balance;letter-spacing:-.005em}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;padding:22px 14px 16px;gap:18px;overflow-y:auto}
+.brand{padding:0 8px}
+.brand .eyebrow{font-size:10px}
+.brand h1{font-size:25px;font-style:italic;margin-top:4px;color:var(--ink)}
+.brand h1 b{font-style:normal;font-weight:500;color:var(--brass)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;justify-content:space-between;align-items:center;gap:8px;background:none;border:0;border-radius:var(--r);padding:8px 10px;text-align:left;color:var(--ink-2);cursor:pointer}
+.nav button:hover{background:var(--panel-2);color:var(--ink)}
+.nav button.on{background:var(--brass-soft);color:var(--ink)}
+.nav button.on .lbl{color:var(--brass)}
+.nav .cnt{font-family:var(--f-mono);font-size:11px;color:var(--faint)}
+.search-box{padding:0 2px}
+.search-box input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:13px}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:0 6px;font-size:12px}
+.status{display:flex;gap:8px;align-items:flex-start;color:var(--muted);line-height:1.4}
+.status i{width:7px;height:7px;border-radius:50%;background:var(--faint);margin-top:5px;flex:none}
+.status.ok i{background:var(--good)} .status.loc i{background:var(--warn)}
+.foot-btns{display:flex;gap:6px;flex-wrap:wrap}
+
+main{min-width:0;padding-block:28px 80px;padding-left:max(28px, env(safe-area-inset-left,0px));padding-right:max(28px, env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:18px}
+.head h2{font-size:34px;line-height:1.1}
+.head p{color:var(--muted);max-width:62ch;margin-top:6px}
+.head .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- controls ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--panel-2);border-radius:var(--r);padding:7px 13px;cursor:pointer;font-size:13.5px;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--brass)}
+.btn.primary{background:var(--brass);border-color:var(--brass);color:var(--brass-ink);font-weight:500}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:none}
+.btn.danger{color:var(--bad)} .btn.danger[data-armed]{background:var(--contra-soft);border-color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.mini{border:1px solid var(--line);background:none;border-radius:4px;padding:2px 8px;font-size:12px;color:var(--muted);cursor:pointer}
+.mini:hover{color:var(--ink);border-color:var(--brass)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar input[type=search],.toolbar select{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:13.5px}
+.toolbar input[type=search]{flex:1 1 220px;min-width:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{background:none;border:0;padding:6px 12px;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--brass-soft);color:var(--brass)}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-2);background:none;white-space:nowrap}
+button.chip{cursor:pointer}
+button.chip:hover{border-color:var(--brass)}
+.chip.on{background:var(--brass-soft);border-color:var(--brass);color:var(--brass)}
+.chip.pro{color:var(--pro);border-color:color-mix(in srgb,var(--pro) 45%,transparent);background:var(--pro-soft)}
+.chip.contra{color:var(--contra);border-color:color-mix(in srgb,var(--contra) 45%,transparent);background:var(--contra-soft)}
+.chip.ex{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,transparent);border-style:dashed}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ---------- panels ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.panel-h h3{font-size:19px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{background:var(--panel);padding:16px 18px;display:flex;flex-direction:column;gap:2px;cursor:pointer;border:0;text-align:left;color:inherit}
+.stat:hover{background:var(--panel-2)}
+.stat .n{font-family:var(--f-display);font-size:38px;line-height:1.05;font-variant-numeric:lining-nums tabular-nums}
+.stat .sub{font-size:12px;color:var(--faint)}
+.quick{display:flex;gap:8px;flex-wrap:wrap}
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px dashed color-mix(in srgb,var(--warn) 55%,transparent);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--ink-2)}
+.empty{color:var(--muted);font-size:13.5px;padding:6px 0}
+.empty b{color:var(--ink-2);font-weight:500}
+
+/* list rows */
+.rows{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:14px;align-items:baseline;padding:11px 4px;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;color:inherit;width:100%}
+.row:first-child{border-top:0}
+.row:hover .t{color:var(--brass)}
+.row .d{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.row .t{font-family:var(--f-display);font-size:17px;line-height:1.3;min-width:0}
+.row .m{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.row .s{grid-column:2 / -1;font-size:13px;color:var(--muted);margin-top:-4px}
+.group-h{margin-top:14px;padding:6px 4px;border-bottom:1px solid var(--line-2)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 15px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;color:inherit;min-width:0}
+.card:hover{border-color:var(--line-2);background:var(--panel-2)}
+.card h4{font-size:17px;line-height:1.3}
+.card p{font-size:13px;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card .foot{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:auto;font-size:12px;color:var(--faint)}
+.dots{letter-spacing:2px;color:var(--brass);font-size:11px}
+.dots .off{color:var(--line-2)}
+
+/* checklist */
+.check{display:flex;flex-direction:column}
+.check-i{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 2px;border-top:1px solid var(--line)}
+.check-i:first-child{border-top:0}
+.check-i input{margin-top:4px;accent-color:var(--brass)}
+.check-i.done .tx{color:var(--faint);text-decoration:line-through}
+.check-i .meta{font-size:11.5px;color:var(--faint)}
+.x{background:none;border:0;color:var(--faint);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px}
+.x:hover{color:var(--bad)}
+.inline-add{display:flex;gap:6px;flex-wrap:wrap}
+.inline-add input,.inline-add select{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:6px 9px;font-size:13px}
+.inline-add input[type=text]{flex:1 1 160px;min-width:0}
+
+/* weaknesses */
+.weak{display:flex;flex-direction:column;gap:6px}
+.weak-i{display:grid;grid-template-columns:3px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0}
+.weak-i .bar{align-self:stretch;border-radius:2px;background:var(--warn)}
+.weak-i.hi .bar{background:var(--bad)}
+.weak-i.lo .bar{background:var(--faint)}
+.weak-i .meta{font-size:12px;color:var(--muted)}
+
+/* ---------- sheet ---------- */
+.sheet{position:fixed;inset:0;z-index:40;display:flex;justify-content:flex-end}
+.sheet-bg{position:absolute;inset:0;background:rgba(6,8,12,.62)}
+.sheet-panel{position:relative;width:min(760px,100%);height:100%;background:var(--panel);border-left:1px solid var(--line-2);overflow-y:auto;padding-block:max(22px, env(safe-area-inset-top,0px)) max(40px, env(safe-area-inset-bottom,0px));padding-left:28px;padding-right:max(28px, env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+.sheet-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.sheet-top h2{font-size:28px;line-height:1.2}
+.sheet-actions{display:flex;gap:8px;flex-wrap:wrap}
+.sec{display:flex;flex-direction:column;gap:6px}
+.sec h5{margin:0;font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass)}
+.prose{color:var(--ink-2);max-width:68ch;display:flex;flex-direction:column;gap:6px}
+.prose ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:3px}
+.prose h4{font-size:16px;color:var(--ink);margin-top:4px}
+.prose strong{color:var(--ink);font-weight:600}
+.meta-line{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.missing{font-size:12.5px;color:var(--faint)}
+.linked{display:flex;flex-direction:column;gap:6px}
+.linked button{display:flex;justify-content:space-between;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 11px;cursor:pointer;text-align:left;color:inherit}
+.linked button:hover{border-color:var(--brass)}
+.linked .lt{font-family:var(--f-display);font-size:15.5px}
+.linked .ls{font-size:12.5px;color:var(--muted);margin-top:2px}
+.notes-log{display:flex;flex-direction:column;gap:8px}
+.note{border-left:2px solid var(--line-2);padding:2px 0 2px 12px}
+.note .when{font-family:var(--f-mono);font-size:11px;color:var(--faint)}
+.add-note{display:flex;gap:8px;align-items:flex-end}
+.add-note textarea{flex:1;min-width:0}
+.ratings-view{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr) 28px;gap:6px 12px;align-items:center;font-size:13px}
+.rbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.rbar i{display:block;height:100%;background:var(--brass)}
+
+/* forms */
+form.ed{display:flex;flex-direction:column;gap:14px}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld label,.fld .lab{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.fld .hint{font-size:11.5px;color:var(--faint)}
+.fld input[type=text],.fld input[type=date],.fld select,.fld textarea,.add-note textarea,.composer textarea,.kb-add textarea,.kb-add input{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;width:100%;min-width:0}
+.fld textarea,.add-note textarea{resize:vertical;line-height:1.5}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--brass);outline:none}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.form-foot{display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:-40px;background:var(--panel);padding:12px 0;border-top:1px solid var(--line)}
+.picker{border:1px solid var(--line-2);border-radius:var(--r);background:var(--bg);padding:8px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.picker input{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:13px}
+.picker button{background:none;border:0;text-align:left;padding:6px 6px;border-radius:4px;cursor:pointer;color:var(--ink-2);font-size:13px}
+.picker button:hover{background:var(--panel-2);color:var(--ink)}
+.linklist{border:1px solid var(--line);border-radius:var(--r);max-height:200px;overflow-y:auto;padding:6px 8px;background:var(--bg)}
+.linklist label{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:13px;color:var(--ink-2);cursor:pointer}
+.linklist input{accent-color:var(--brass)}
+.sliders{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.slider{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr) 30px;gap:10px;align-items:center;font-size:13px;color:var(--ink-2)}
+.slider input{accent-color:var(--brass);width:100%}
+.slider output{font-family:var(--f-mono);text-align:right;color:var(--brass)}
+
+/* ---------- trainer ---------- */
+.trainer{display:grid;grid-template-columns:minmax(0,330px) minmax(0,1fr);gap:18px;align-items:start}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mode{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;text-align:left;cursor:pointer;color:var(--ink-2);font-size:13px;line-height:1.3}
+.mode:hover{border-color:var(--line-2)}
+.mode.on{border-color:var(--brass);color:var(--brass);background:var(--brass-soft)}
+.motion-card{border:1px solid var(--line-2);border-radius:var(--r);padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
+.motion-card .mt{font-family:var(--f-display);font-size:18px;line-height:1.3}
+.timer{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.clock{font-family:var(--f-mono);font-size:40px;letter-spacing:.02em;text-align:center;font-variant-numeric:tabular-nums;line-height:1.1}
+.clock.warn{color:var(--warn)} .clock.over{color:var(--bad)}
+.clock-sub{text-align:center;font-size:12px;color:var(--muted);min-height:18px}
+.tbar{height:4px;background:var(--line);border-radius:2px;position:relative;overflow:hidden}
+.tbar i{position:absolute;left:0;top:0;bottom:0;background:var(--brass)}
+.chat{display:flex;flex-direction:column;gap:12px;min-height:360px}
+.msg{max-width:92%;border-radius:8px;padding:11px 14px;font-size:14px;line-height:1.55;min-width:0;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:var(--panel-2);border:1px solid var(--line-2);white-space:pre-wrap}
+.msg.ai{align-self:flex-start;border-left:2px solid var(--brass);background:var(--bg);border-radius:0 8px 8px 0}
+.msg.sys{align-self:center;font-size:12.5px;color:var(--muted);background:none;text-align:center;padding:4px 10px;border:1px dashed var(--line);border-radius:999px}
+.msg .who{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+.msg.ai .prose{color:var(--ink)}
+.composer{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.composer textarea{min-height:110px;resize:vertical}
+.composer .row-b{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.fb{border:1px solid var(--brass);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--brass-soft)}
+.fb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+
+/* ---------- progress ---------- */
+.chart-wrap{overflow-x:auto}
+.chart svg{display:block;width:100%;height:auto;min-width:520px}
+.chart text{fill:var(--muted);font-family:var(--f-mono);font-size:10.5px}
+.legend{display:flex;gap:6px;flex-wrap:wrap}
+.legend button i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.tbl-wrap{overflow-x:auto}
+table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px}
+.tbl th{font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.tbl td.num{font-family:var(--f-mono);text-align:right}
+.tbl th.num{text-align:right}
+.up{color:var(--good)} .down{color:var(--bad)} .flat{color:var(--muted)}
+.hbars{display:flex;flex-direction:column;gap:7px}
+.hbar{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) 34px;gap:10px;align-items:center;font-size:13px}
+.hbar .track{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.hbar .track i{display:block;height:100%;background:var(--warn);border-radius:4px}
+.hbar .track i.hi{background:var(--bad)}
+
+/* ---------- knowledge ---------- */
+.kb{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:start}
+.toc{position:sticky;top:20px;display:flex;flex-direction:column;gap:2px}
+.toc button{background:none;border:0;text-align:left;padding:6px 10px;border-radius:var(--r);color:var(--muted);cursor:pointer;font-size:13.5px}
+.toc button:hover{color:var(--ink)}
+.toc button.on{color:var(--brass);background:var(--brass-soft)}
+.kb-body{display:flex;flex-direction:column;gap:18px;min-width:0}
+.kb-block{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
+.kb-block h4{font-size:20px}
+.kb-block .prose{font-size:14.5px}
+.kb-block dl{margin:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.kb-block dt{font-family:var(--f-display);font-size:17px;color:var(--ink)}
+.kb-block dd{margin:2px 0 0;color:var(--ink-2)}
+.kb-block dd em{color:var(--muted);font-style:normal}
+.kb-block dd .ctr{color:var(--pro)}
+.kb-own{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--panel);display:flex;flex-direction:column;gap:10px}
+.kb-add{display:flex;flex-direction:column;gap:6px}
+.timeline-tbl td:first-child{white-space:nowrap}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(20px, calc(env(safe-area-inset-bottom,0px) + 12px));z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1000px){
+  .grid2,.trainer{grid-template-columns:minmax(0,1fr)}
+  .kb{grid-template-columns:minmax(0,1fr)}
+  .toc{position:static;flex-direction:row;flex-wrap:wrap}
+}
+@media (max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:sticky;top:0;height:auto;z-index:30;flex-direction:column;gap:10px;padding-block:calc(env(safe-area-inset-top,0px) + 10px) 8px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+  .brand{display:flex;align-items:baseline;gap:10px;padding:0}
+  .brand h1{font-size:20px;margin:0}
+  .nav{flex-direction:row;overflow-x:auto;gap:4px;scrollbar-width:none;margin:0 -4px}
+  .nav button{flex:none;padding:6px 10px}
+  .nav .cnt{display:none}
+  .search-box,.side-foot{display:none}
+  main{padding-block:20px 60px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+  .head h2{font-size:27px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row{grid-template-columns:minmax(0,1fr)}
+  .row .m{justify-content:flex-start}
+  .row .s{grid-column:1}
+  .sheet-panel{padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+  .slider,.ratings-view{grid-template-columns:minmax(0,120px) minmax(0,1fr) 28px}
+  .hbar{grid-template-columns:minmax(0,120px) minmax(0,1fr) 30px}
+  .mobile-only{display:inline-flex!important}
+}
+.mobile-only{display:none!important}
+@media (prefers-reduced-motion:no-preference){
+  .sheet-panel{animation:slide .18s ease-out}
+  @keyframes slide{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}
+}
+</style>
+
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="eyebrow">Debattierklub Wien</div>
+      <h1>Debate <b>Hub</b></h1>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="search-box"><input id="gsearch" type="search" placeholder="Alles durchsuchen …" aria-label="Alles durchsuchen"></div>
+    <div class="side-foot">
+      <div class="status" id="status"><i></i><span>Verbinde …</span></div>
+      <div class="foot-btns">
+        <button class="mini" data-act="export">Sichern (JSON)</button>
+        <button class="mini" data-act="import">Importieren</button>
+      </div>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div class="sheet" id="sheet" hidden><div class="sheet-bg" data-act="bgclose"></div><div class="sheet-panel" id="sheetPanel" role="dialog" aria-modal="true"></div></div>
+<div id="toast" aria-live="polite"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   Konstanten
+   ========================================================= */
+const SKILLS = [
+  ['struktur','Argumentationsstruktur'],['logik','Logik & Analyse'],['rhetorik','Rhetorik & Ausdruck'],
+  ['schlagfertigkeit','Schlagfertigkeit'],['rebuttal','Rebuttal'],['wissen','Wissen & Beispiele'],['rede','Redeaufbau']
+];
+const SKILL_LABEL = Object.fromEntries(SKILLS);
+const CATS = ['Politik','Wirtschaft','Gesellschaft','Ethik & Philosophie','Technologie','Internationale Beziehungen','Umwelt','Bildung'];
+const ARG_TYPES = ['Argument','Beispiel','Statistik','Studie','Historisches Beispiel','Framework'];
+const WEAK_TAGS = ['Zeitmanagement','Unklare Struktur','Mechanismus fehlt','Zu wenig Beispiele','Kein Weighing','Rebuttal zu spät','Füllwörter','Sprechtempo','Definition unklar','POIs schwach','Rolle nicht erfüllt','Nervosität','Wiederholungen'];
+const RESULTS = ['—','Gewonnen','Verloren','1. Platz','2. Platz','3. Platz','4. Platz','Übungsdebatte'];
+const COLS = ['motions','journal','args','notes','assessments','goals','tasks','sessions'];
+const COL_NAME = {motions:'Motion',journal:'Journaleintrag',args:'Argument',notes:'Notiz',assessments:'Selbsteinschätzung',goals:'Ziel',tasks:'Aufgabe',sessions:'Trainingseinheit'};
+
+const PRACTICE = [
+  ['Politik','DH würde eine Wahlpflicht einführen'],
+  ['Politik','DH würde Volksabstimmungen auf Bundesebene verbindlich machen'],
+  ['Politik','DH bedauert die zunehmende Personalisierung der Politik'],
+  ['Politik','DH würde Amtszeitbegrenzungen für Parlamentsabgeordnete einführen'],
+  ['Wirtschaft','DH würde ein bedingungsloses Grundeinkommen einführen'],
+  ['Wirtschaft','DH würde eine Vermögenssteuer einführen'],
+  ['Wirtschaft','DH würde die Viertagewoche gesetzlich verankern'],
+  ['Wirtschaft','DH glaubt, dass Zentralbanken Klimaziele verfolgen sollten'],
+  ['Gesellschaft','DH würde Influencer-Werbung für Minderjährige verbieten'],
+  ['Gesellschaft','DH bedauert die Kultur der ständigen Erreichbarkeit'],
+  ['Gesellschaft','DH würde eine verpflichtende Frauenquote in Vorständen einführen'],
+  ['Gesellschaft','DH würde soziale Medien für unter 16-Jährige verbieten'],
+  ['Ethik & Philosophie','DH glaubt, dass Wohlhabende eine moralische Pflicht zu spenden haben'],
+  ['Ethik & Philosophie','DH würde einen regulierten Markt für Organspenden zulassen'],
+  ['Ethik & Philosophie','DH glaubt, dass man das Werk von der Person des Künstlers trennen sollte'],
+  ['Ethik & Philosophie','DH würde Tierversuche vollständig verbieten'],
+  ['Technologie','DH würde KI-generierte Inhalte kennzeichnungspflichtig machen'],
+  ['Technologie','DH bedauert die Entwicklung autonomer Waffensysteme'],
+  ['Technologie','DH würde Gesichtserkennung im öffentlichen Raum verbieten'],
+  ['Technologie','DH würde große Technologiekonzerne zerschlagen'],
+  ['Internationale Beziehungen','DH würde das Vetorecht im UN-Sicherheitsrat abschaffen'],
+  ['Internationale Beziehungen','DH glaubt, dass Österreich seine Neutralität aufgeben sollte'],
+  ['Internationale Beziehungen','DH würde Sanktionen nur noch gezielt gegen Einzelpersonen verhängen'],
+  ['Internationale Beziehungen','DH unterstützt eine gemeinsame europäische Armee'],
+  ['Umwelt','DH würde Inlandsflüge verbieten, wo eine Bahnverbindung unter sechs Stunden existiert'],
+  ['Umwelt','DH glaubt, dass Klimaaktivismus zivilen Ungehorsam einschließen sollte'],
+  ['Umwelt','DH würde Fleisch so besteuern wie Tabak'],
+  ['Umwelt','DH würde Kernkraft als grüne Energie fördern'],
+  ['Bildung','DH würde Noten in der Pflichtschule abschaffen'],
+  ['Bildung','DH würde Studiengebühren an öffentlichen Universitäten einführen'],
+  ['Bildung','DH würde Debattieren als Pflichtfach einführen'],
+  ['Bildung','DH würde Privatschulen abschaffen']
+];
+
+const MODES = {
+  duel:{name:'Debatte gegen KI', desc:'Du vertrittst deine Seite, die KI die Gegenseite – mit echten Reden, Rebuttals und Zwischenfragen.', needsMotion:true},
+  prep:{name:'Spontan-Vorbereitung', desc:'Unbekannte Motion, 15 Minuten Vorbereitung. Danach zerlegt die KI deinen Case.', needsMotion:true},
+  rebuttal:{name:'Rebuttal-Drill', desc:'Die KI bringt starke Argumente der Gegenseite, du widerlegst. Jede Antwort wird bewertet.', needsMotion:true},
+  poi:{name:'POI-Drill', desc:'Kurze, scharfe Zwischenfragen in Serie. Trainiert Schlagfertigkeit.', needsMotion:true},
+  check:{name:'Argument-Check', desc:'Füge ein Argument ein. Die KI prüft Mechanismus, Logik, Fehlschlüsse und Weighing.', needsMotion:false},
+  switch:{name:'Seitenwechsel', desc:'Erst die stärkste Pro-Skizze, dann die stärkste Contra-Skizze. Die KI prüft, ob beide gleich stark sind.', needsMotion:true}
+};
+
+/* =========================================================
+   Wissenssammlung (statisches Nachschlagewerk)
+   ========================================================= */
+const KB = [
+ {id:'rede', title:'Aufbau einer Rede', blocks:[
+  {h:'Grundgerüst einer 7-Minuten-Rede (BPS)', b:`<ul>
+   <li><strong>0:00–0:30 · Einstieg & Roadmap.</strong> Ein Satz, der das Problem greifbar macht, dann: „Ich bringe zwei Punkte: erstens …, zweitens …“</li>
+   <li><strong>0:30–2:00 · Rebuttal.</strong> Ab der zweiten Rede zuerst die stärkste gegnerische Linie angreifen, nicht die schwächste.</li>
+   <li><strong>2:00–6:00 · Eigene Argumente.</strong> Je Argument: These, Mechanismus, Beispiel, Impact.</li>
+   <li><strong>6:00–7:00 · Weighing & Schluss.</strong> Warum gewinnt unser Clash? Letzter Satz greift den Einstieg auf.</li>
+   <li>Die erste und letzte Minute sind <strong>geschützte Zeit</strong>: keine Zwischenfragen.</li></ul>`},
+  {h:'Ein Argument vollständig ausbauen', b:`<ul>
+   <li><strong>These:</strong> eine Zeile, die die Jury mitschreiben kann.</li>
+   <li><strong>Mechanismus:</strong> Warum genau passiert das? Welche Akteure handeln mit welchen Anreizen? Hier gewinnen oder verlieren die meisten Argumente.</li>
+   <li><strong>Beispiel / Beleg:</strong> konkret, überprüfbar, möglichst nah am Thema.</li>
+   <li><strong>Impact:</strong> Wer ist betroffen, wie stark, wie viele, wie lange?</li>
+   <li><strong>Rückbindung:</strong> „Deshalb ist die Motion …“</li></ul>`},
+  {h:'Schluss', b:`<p>Kein neues Material. Wiederhole die zwei, drei entscheidenden Fragen der Debatte und zeige, warum deine Seite jede davon gewinnt. Ein kurzer Callback auf den Einstieg wirkt runder als eine neue Pointe.</p>`},
+  {h:'Besonderheiten der Offenen Parlamentarischen Debatte (OPD)', b:`<ul>
+   <li>Je drei Fraktionsredner pro Seite (7 Minuten) und drei freie Redner (3,5 Minuten), die sich keiner Seite zuordnen müssen.</li>
+   <li>Zwischenfragen und Zwischenrufe sind Teil des Formats; kurze, präzise Zwischenrufe werden positiv bewertet.</li>
+   <li>Bewertet wird in fünf Kategorien: <strong>Sachverstand, Urteilskraft, Sprachkraft, Auftreten, Kontaktfähigkeit</strong>. Rhetorik zählt hier sichtbar mehr als in BPS.</li></ul>`}
+ ]},
+ {id:'modelle', title:'Argumentationsmodelle', blocks:[
+  {h:'ARE(L): Assertion – Reasoning – Evidence – Link', b:`<p>Die Grundform jedes Arguments. <strong>Assertion</strong> ist die These, <strong>Reasoning</strong> die logische Begründung, <strong>Evidence</strong> Beispiel oder Daten, <strong>Link</strong> die Rückbindung an die Motion. Fehlt das Reasoning, bleibt nur eine Behauptung mit Beispiel.</p>`},
+  {h:'These – Mechanismus – Impact', b:`<p>Die in BPS übliche Variante. Der Mechanismus beschreibt Schritt für Schritt, wie die Politik oder Idee zum Ergebnis führt. Gute Mechanismen benennen Akteure, Anreize und Hindernisse.</p>`},
+  {h:'Toulmin-Modell', b:`<ul><li><strong>Claim</strong> – die Behauptung</li><li><strong>Data</strong> – die Grundlage</li><li><strong>Warrant</strong> – warum die Daten den Claim stützen</li><li><strong>Backing</strong> – Stütze für den Warrant</li><li><strong>Qualifier</strong> – Einschränkung („in den meisten Fällen“)</li><li><strong>Rebuttal</strong> – Bedingungen, unter denen der Claim nicht gilt</li></ul><p>Nützlich, um eigene Argumente auf Lücken zu prüfen: Fast jeder Angriff zielt auf den Warrant.</p>`},
+  {h:'Stakeholder-Analyse', b:`<p>Für jede betroffene Gruppe: Was ändert sich für sie? Wie stark? Wie wahrscheinlich? Wie verwundbar ist sie? Liefert in 15 Minuten Vorbereitung zuverlässig Material und zeigt, welche Gruppen die Gegenseite ignorieren wird.</p>`},
+  {h:'Prinzip und Praxis', b:`<p><strong>Prinzipielle Argumente</strong> fragen, ob etwas richtig ist (Rechte, Autonomie, Legitimität). <strong>Praktische Argumente</strong> fragen, was passiert (Folgen, Anreize). Starke Cases haben beide Ebenen und erklären, welche Ebene im Konflikt Vorrang hat.</p>`},
+  {h:'Kontrafaktum: Welt mit und ohne Motion', b:`<p>Vergleiche nie die Motion mit einer perfekten Welt, sondern mit dem realistischen Status quo oder der realistischen Alternative der Gegenseite. Frag dich: Was passiert ohne die Maßnahme ohnehin?</p>`},
+  {h:'Weighing-Kriterien', b:`<ul><li><strong>Ausmaß</strong> – wie groß ist der Schaden oder Nutzen?</li><li><strong>Wahrscheinlichkeit</strong> – wie sicher tritt er ein?</li><li><strong>Reversibilität</strong> – lässt sich das rückgängig machen?</li><li><strong>Verwundbarkeit</strong> – trifft es Menschen, die sich nicht schützen können?</li><li><strong>Zeithorizont</strong> – kurzfristig oder dauerhaft?</li><li><strong>Exklusivität</strong> – gibt es das nur auf einer Seite?</li></ul>`}
+ ]},
+ {id:'rhetorik', title:'Rhetorische Techniken', blocks:[
+  {h:'Signposting', b:`<p>Sag, wo du bist: „Zu meinem zweiten Punkt.“ „Zurück zur Frage der Durchsetzbarkeit.“ Die Jury schreibt mit; wer sich nicht verortet, verliert Punkte, die er inhaltlich verdient hätte.</p>`},
+  {h:'Dreierfigur (Trikolon)', b:`<p>Drei parallele Glieder wirken vollständig: „Es ist unfair, es ist ineffektiv und es ist vermeidbar.“ Sparsam einsetzen, am besten an Anfang und Ende.</p>`},
+  {h:'Antithese', b:`<p>Zwei Gegensätze im selben Satzbau: „Die Opposition schützt den Markt, wir schützen die Menschen darin.“ Eignet sich für Weighing.</p>`},
+  {h:'Anapher', b:`<p>Wiederholung am Satzanfang: „Wer zahlt? Die Pendlerin. Wer verliert? Die Pendlerin.“ Erzeugt Rhythmus und Betonung.</p>`},
+  {h:'Konkretisierung', b:`<p>Statt „viele Menschen“ eine konkrete Person in einer konkreten Situation. Abstrakte Impacts werden so greifbar und bleiben im Gedächtnis.</p>`},
+  {h:'Pausen, Tempo, Lautstärke', b:`<p>Eine Pause vor der Kernaussage wirkt stärker als Lautstärke. Schneller sprechen bei Aufzählungen, langsamer bei der These. Füllwörter durch kurze Pausen ersetzen.</p>`},
+  {h:'Framing', b:`<p>Wer die Leitfrage der Debatte definiert, gewinnt oft den Clash: „Die eigentliche Frage heute ist nicht X, sondern Y.“ Muss fair bleiben, sonst wirkt es als Ausweichen.</p>`},
+  {h:'Callback', b:`<p>Ein Bild oder Satz aus dem Einstieg kehrt im Schluss wieder. Gibt der Rede eine erkennbare Form.</p>`}
+ ]},
+ {id:'fehlschluesse', title:'Logische Fehlschlüsse', blocks:[
+  {h:'Typische Fehlschlüsse und wie man sie kontert', dl:[
+   ['Strohmann','Die gegnerische Position wird verzerrt und dann widerlegt.','„Die Regierung will also jede Form von Kontrolle abschaffen.“','„Das ist nicht unsere Position. Wir sagen …, und darauf seid ihr nicht eingegangen.“'],
+   ['Falsches Dilemma','Es werden nur zwei Optionen dargestellt, obwohl es mehr gibt.','„Entweder wir verbieten es, oder wir geben auf.“','Dritte Option benennen und zeigen, warum sie realistisch ist.'],
+   ['Dammbruch-Argument','Eine Kette von Folgen wird behauptet, ohne jeden Schritt zu begründen.','„Heute Kennzeichnung, morgen Zensur.“','„Welcher Mechanismus führt von Schritt A zu Schritt B? Wer würde das beschließen?“'],
+   ['Post hoc / Korrelation ≠ Kausalität','Zeitliche Abfolge oder Zusammenhang wird als Ursache gedeutet.','„Seit der Reform sinkt die Kriminalität, also wirkt sie.“','Alternative Ursachen und Vergleichsfälle anführen.'],
+   ['Unzulässige Verallgemeinerung','Aus Einzelfällen wird eine Regel gemacht.','„Mein Cousin hat es ohne Studium geschafft, also braucht niemand eins.“','Repräsentativität des Beispiels hinterfragen.'],
+   ['Ad hominem','Die Person statt des Arguments wird angegriffen.','„Das sagt jemand, der selbst nie gearbeitet hat.“','Zurück zum Argument lenken; nicht persönlich werden.'],
+   ['Tu quoque','Kritik wird abgewehrt, weil der Kritiker selbst nicht konsequent ist.','„Ihr fliegt doch auch in den Urlaub.“','Inkonsistenz einer Person widerlegt nicht das Argument.'],
+   ['Zirkelschluss','Die Schlussfolgerung steckt schon in der Prämisse.','„Das Gesetz ist gerecht, weil es fair ist.“','Fordern, dass ein unabhängiger Grund genannt wird.'],
+   ['Unzulässiges Autoritätsargument','Eine Autorität wird außerhalb ihres Fachgebiets oder ohne Begründung zitiert.','„Ein bekannter Unternehmer hält das für falsch.“','Nach der Begründung der Autorität fragen.'],
+   ['Naturalistischer Fehlschluss','Aus dem, was natürlich ist oder üblich war, wird abgeleitet, was richtig ist.','„Das war schon immer so.“','Tradition ist eine Beschreibung, keine Rechtfertigung.'],
+   ['Nirwana-Fehlschluss','Eine Lösung wird abgelehnt, weil sie nicht perfekt ist.','„Das löst das Problem nicht vollständig.“','„Verglichen mit dem Status quo ist es besser, und das ist der Maßstab.“'],
+   ['Ablenkung (Red Herring)','Ein Nebenthema lenkt vom eigentlichen Streitpunkt ab.','Bei einer Steuerdebatte plötzlich über Bürokratie im Allgemeinen reden.','„Das ist interessant, aber nicht der Clash dieser Debatte.“'],
+   ['Mehrheitsargument','Etwas gilt als richtig, weil viele es glauben.','„Die Mehrheit ist dafür, also stimmt es.“','Beliebtheit belegt keine Wirksamkeit oder Gerechtigkeit.'],
+   ['Äquivokation','Ein Begriff wird im Verlauf mit wechselnder Bedeutung verwendet.','„Freiheit“ einmal als Abwesenheit von Zwang, dann als materielle Möglichkeit.','Begriff festnageln: „In welchem Sinn verwendet ihr das Wort?“']
+  ]}
+ ]},
+ {id:'strategien', title:'Debattenstrategien', blocks:[
+  {h:'Rollen im British Parliamentary Style', b:`<ul>
+   <li><strong>Premierminister:</strong> Definition, Modell, erste zwei Argumente.</li>
+   <li><strong>Oppositionsführer:</strong> Definition prüfen, Rebuttal, Gegenlinie und Argumente.</li>
+   <li><strong>Stellvertreter (beide Seiten):</strong> Rebuttal, eigene Argumente verteidigen, weiteres Material.</li>
+   <li><strong>Member (schließende Hälfte):</strong> Extension, also neues Material, das das eigene Team vom eröffnenden abhebt.</li>
+   <li><strong>Whip:</strong> kein neues Argument; Debatte in Clashes zusammenfassen und gewichten, Extension hervorheben.</li></ul>`},
+  {h:'Den Clash finden', b:`<p>Frag dich nach der Eröffnung: Über welche zwei, drei Fragen streiten beide Seiten wirklich? Ordne alle Argumente diesen Fragen zu. Wer die Clashes benennt, steuert die Bewertung.</p>`},
+  {h:'Concede and outweigh', b:`<p>Einen Punkt der Gegenseite zugestehen und zeigen, dass der eigene schwerer wiegt. Wirkt souverän und spart Zeit, wenn der gegnerische Punkt ohnehin stark ist.</p>`},
+  {h:'Burden-Analyse', b:`<p>Was muss jede Seite beweisen, um zu gewinnen? Häufig trägt die Regierung eine größere Beweislast. Wer die Burden klar formuliert, kann der Gegenseite vorhalten, sie nicht erfüllt zu haben.</p>`},
+  {h:'15 Minuten Vorbereitung', b:`<ul><li><strong>0–3:</strong> jeder allein Ideen sammeln, Stakeholder notieren.</li><li><strong>3–8:</strong> gemeinsam Clash und Linie festlegen, Definition klären.</li><li><strong>8–13:</strong> Argumente aufteilen, Mechanismen ausformulieren.</li><li><strong>13–15:</strong> Erwartete Gegenargumente und Antworten notieren.</li></ul>`},
+  {h:'Zwischenfragen (POIs)', b:`<p>Zwei pro Rede annehmen ist ein guter Richtwert. Eigene POIs kurz und gezielt: auf den Mechanismus, nicht auf Details. Eine Frage, die die Gegenseite in ein Dilemma zwingt, ist stärker als eine Gegenthese.</p>`}
+ ]},
+ {id:'formulierungen', title:'Nützliche Formulierungen', blocks:[
+  {h:'Roadmap & Signposting', b:`<ul><li>„Ich werde zuerst auf die Opposition eingehen und dann zwei eigene Punkte bringen.“</li><li>„Damit zu meinem zweiten und wichtigsten Punkt.“</li><li>„Halten wir fest: …“</li></ul>`},
+  {h:'Rebuttal einleiten', b:`<ul><li>„Die Opposition hat uns ein Argument zu X gebracht. Es scheitert an drei Stellen.“</li><li>„Selbst wenn wir das zugestehen, …“</li><li>„Das ist nicht exklusiv für ihre Seite, denn …“</li></ul>`},
+  {h:'Weighing', b:`<ul><li>„Selbst wenn beide Effekte eintreten, wiegt unserer schwerer, weil er irreversibel ist.“</li><li>„Ihr Schaden ist möglich, unser Nutzen ist sicher.“</li><li>„Die Frage ist nicht, ob es Kosten gibt, sondern wer sie trägt.“</li></ul>`},
+  {h:'Zwischenfragen', b:`<ul><li>Annehmen: „Gerne, bitte.“ – Ablehnen: „Danke, später.“</li><li>Antwort zurückführen: „Genau das ist mein Punkt, denn …“</li></ul>`},
+  {h:'Schluss', b:`<ul><li>„Diese Debatte dreht sich um eine Frage: …“</li><li>„Deshalb sind wir stolz, die Regierung/Opposition zu vertreten.“</li></ul>`}
+ ]},
+ {id:'rebuttals', title:'Starke Rebuttals', blocks:[
+  {h:'Die fünf Ebenen eines Rebuttals', b:`<ul>
+   <li><strong>Nicht wahr:</strong> Die Prämisse stimmt empirisch nicht.</li>
+   <li><strong>Nicht kausal:</strong> Der Mechanismus bricht; das Ergebnis folgt nicht aus der Maßnahme.</li>
+   <li><strong>Nicht wichtig:</strong> Der Effekt ist klein oder betrifft wenige.</li>
+   <li><strong>Nicht exklusiv:</strong> Das passiert auch im Status quo oder auf unserer Seite.</li>
+   <li><strong>Turn:</strong> Das Argument spricht in Wahrheit für uns.</li></ul><p>Ein guter Rebuttal kombiniert zwei Ebenen: zuerst den Mechanismus angreifen, dann „selbst wenn“ den Impact relativieren.</p>`},
+  {h:'Muster: angewendet auf ein Beispielargument', b:`<p><em class="muted">Muster zur Veranschaulichung, kein realer Debattenverlauf.</em></p><p><strong>Argument der Regierung:</strong> „Ein Social-Media-Verbot für unter 16-Jährige schützt die psychische Gesundheit.“</p><ul>
+   <li><strong>Nicht kausal:</strong> „Jugendliche umgehen Altersgrenzen mit wenigen Klicks. Das Verbot verschiebt die Nutzung in unregulierte Ecken, wo es keinen Jugendschutz gibt.“</li>
+   <li><strong>Nicht exklusiv:</strong> „Plattformpflichten wie Zeitlimits und strengere Algorithmen erreichen dasselbe Ziel ohne Totalverbot.“</li>
+   <li><strong>Turn:</strong> „Gerade isolierte Jugendliche finden online Gemeinschaft. Ihr nehmt den Verwundbarsten ihre Unterstützung.“</li>
+   <li><strong>Weighing:</strong> „Selbst wenn ein Teil der Nutzung sinkt, wiegt der Verlust für gefährdete Gruppen schwerer.“</li></ul>`}
+ ]}
+];
+
+/* =========================================================
+   Helfer
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function today(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+const dayOf = iso => iso ? String(iso).slice(0,10) : '';
+function fmtDate(d){ if(!d) return 'ohne Datum'; const x = new Date(d+'T12:00:00'); return isNaN(x) ? d : x.toLocaleDateString('de-AT',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtShort(d){ if(!d) return '—'; const x = new Date(d+'T12:00:00'); return isNaN(x) ? d : x.toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
+const clip = (s,n) => { s = String(s||'').replace(/\s+/g,' ').trim(); return s.length>n ? s.slice(0,n-1)+'…' : s; };
+const byDateDesc = (a,b) => (b.date||dayOf(b.createdAt)).localeCompare(a.date||dayOf(a.createdAt));
+const byUpdated = (a,b) => String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));
+const avg = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : null;
+const fmt1 = n => n==null ? '—' : n.toFixed(1).replace('.',',');
+function md(t){
+  const lines = esc(t).split('\n'); let out = '', list = false;
+  for(let l of lines){
+    l = l.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    if(/^\s*[-•*]\s+/.test(l)){ if(!list){ out+='<ul>'; list=true; } out += '<li>'+l.replace(/^\s*[-•*]\s+/,'')+'</li>'; continue; }
+    if(list){ out+='</ul>'; list=false; }
+    if(/^#{1,4}\s/.test(l)) out += '<h4>'+l.replace(/^#+\s/,'')+'</h4>';
+    else if(l.trim()) out += '<p>'+l+'</p>';
+  }
+  if(list) out += '</ul>';
+  return out;
+}
+function toast(msg){ const d = document.createElement('div'); d.textContent = msg; $('#toast').appendChild(d); setTimeout(()=>d.remove(), 2800); }
+const posChip = p => p==='Pro' ? '<span class="chip pro">Pro</span>' : p==='Contra' ? '<span class="chip contra">Contra</span>' : p ? `<span class="chip">${esc(p)}</span>` : '';
+const exChip = it => it && it.example ? '<span class="chip ex">Beispiel</span>' : '';
+const get = (col,id) => S[col].find(x=>x.id===id);
+function journalTitle(e){ const m = e.motionId && get('motions', e.motionId); return m ? m.title : (e.title || 'Debatte ohne verknüpfte Motion'); }
+function itemTitle(col, it){
+  if(!it) return '—';
+  if(col==='journal') return journalTitle(it);
+  if(col==='sessions') return (MODES[it.mode]?.name||'Training') + (it.motion ? ' · '+it.motion : '');
+  if(col==='assessments') return 'Selbsteinschätzung ' + fmtDate(it.date);
+  return it.title || it.text || '—';
+}
+
+/* =========================================================
+   Datenspeicher (db-Capability, sonst localStorage)
+   ========================================================= */
+const S = Object.fromEntries(COLS.map(c=>[c,[]]));
+const store = {mode:'init', db:null, loaded:new Set(), slow:false, queues:{}};
+const LS_KEY = 'debate-hub:v1';
+
+function loadLocal(){
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const d = JSON.parse(raw); COLS.forEach(c=>{ if(Array.isArray(d[c])) S[c]=d[c]; }); } }catch(e){}
+  COLS.forEach(c=>store.loaded.add(c));
+}
+function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('Speichern im Browser nicht möglich.'); } }
+
+async function initStore(){
+  let db = null;
+  if(window.claude && typeof window.claude.use === 'function'){
+    try{ db = await window.claude.use('db'); }catch(e){ db = null; }
+  }
+  if(db){
+    store.mode = 'db'; store.db = db;
+    COLS.forEach(col=>{
+      try{
+        db.collection(col).onSnapshot(snap=>{
+          S[col] = snap.docs.map(d=>Object.assign({}, d.data(), {id:d.id}));
+          if(!snap.metadata.fromCache) store.loaded.add(col);
+          scheduleRender();
+        }, err=>{
+          store.loaded.add(col); store.err = err && err.code;
+          scheduleRender();
+        });
+      }catch(e){ store.loaded.add(col); }
+    });
+    setTimeout(()=>{ if(store.loaded.size < COLS.length){ store.slow = true; scheduleRender(); } }, 10000);
+  } else {
+    store.mode = 'local'; loadLocal();
+  }
+  scheduleRender();
+}
+
+function clean(o){ return JSON.parse(JSON.stringify(o)); }
+async function save(col, item){
+  const now = new Date().toISOString();
+  item = Object.assign({}, item);
+  if(!item.id) item.id = uid();
+  if(!item.createdAt) item.createdAt = now;
+  item.updatedAt = now;
+  const idx = S[col].findIndex(x=>x.id===item.id);
+  if(idx>=0) S[col][idx] = item; else S[col].push(item);
+  if(store.mode === 'db'){
+    const {id, ...body} = item;
+    const key = col+'/'+id;
+    const prev = store.queues[key] || Promise.resolve();
+    const p = prev.catch(()=>{}).then(()=>store.db.collection(col).doc(id).set(clean(body)));
+    store.queues[key] = p;
+    p.catch(e=>toast(e && e.code==='quota_exceeded' ? 'Speicher voll: bitte alte Einträge löschen.' : 'Konnte nicht speichern ('+(e&&e.code||'Fehler')+').'));
+  } else saveLocal();
+  scheduleRender();
+  return item;
+}
+async function remove(col, id){
+  S[col] = S[col].filter(x=>x.id!==id);
+  if(store.mode === 'db'){
+    try{ await store.db.collection(col).doc(id).delete(); }catch(e){ toast('Löschen fehlgeschlagen.'); }
+  } else saveLocal();
+  scheduleRender();
+}
+
+/* =========================================================
+   UI-Zustand & Rendering
+   ========================================================= */
+const ROUTES = [
+  ['dashboard','Übersicht'],['motions','Motion-Archiv'],['journal','Debattenjournal'],['library','Argumente'],
+  ['trainer','KI-Trainer'],['progress','Fortschritt'],['knowledge','Wissen']
+];
+const ui = {
+  route:'dashboard', sheet:null,
+  mf:{q:'',cat:'',pos:'',time:'all',sort:'date-desc'},
+  jf:{q:'',tag:''},
+  lf:{q:'',cat:'',type:'',side:''},
+  pf:{on:new Set(SKILLS.map(s=>s[0]))},
+  kb:{sec:'rede', q:''},
+  gq:'', suggestions:null, analysis:null
+};
+function parseHash(){ const h = (location.hash||'').replace('#',''); return ROUTES.some(r=>r[0]===h) || h==='search' ? h : 'dashboard'; }
+
+let rq = false;
+function scheduleRender(){ if(rq) return; rq = true; requestAnimationFrame(()=>{ rq = false; render(); }); }
+
+function swap(root, html){
+  const keep = {};
+  root.querySelectorAll('[data-keep]').forEach(e=>{ if(e.id) keep[e.id] = e.value; });
+  const a = document.activeElement; let fid = null, ss = null, se = null;
+  if(a && root.contains(a) && a.id){ fid = a.id; try{ ss = a.selectionStart; se = a.selectionEnd; }catch(e){} }
+  root.innerHTML = html;
+  for(const id in keep){ const e = document.getElementById(id); if(e && e.hasAttribute('data-keep')) e.value = keep[id]; }
+  if(fid){ const e = document.getElementById(fid); if(e){ e.focus({preventScroll:true}); try{ if(ss!=null) e.setSelectionRange(ss,se); }catch(x){} } }
+}
+
+function render(){
+  renderNav();
+  const st = $('#status');
+  if(store.mode==='db'){ st.className = 'status ok'; st.innerHTML = '<i></i><span>'+(store.slow && store.loaded.size<COLS.length ? 'Daten noch nicht erreichbar – Anzeige evtl. veraltet.' : store.err ? 'Teilweise nicht erreichbar ('+esc(store.err)+')' : 'Gespeichert in deinem Konto, privat für dich.')+'</span>'; }
+  else if(store.mode==='local'){ st.className = 'status loc'; st.innerHTML = '<i></i><span>Nur in diesem Browser gespeichert. Regelmäßig sichern.</span>'; }
+  const v = {dashboard:vDashboard, motions:vMotions, journal:vJournal, library:vLibrary, trainer:vTrainer, progress:vProgress, knowledge:vKnowledge, search:vSearch}[ui.route] || vDashboard;
+  swap($('#main'), '<div class="wrap">'+v()+'</div>');
+  if(ui.route==='trainer') afterTrainerRender();
+  if(ui.sheet && ui.sheet.kind==='detail') renderSheet();
+}
+function renderNav(){
+  const counts = {motions:S.motions.length, journal:S.journal.length, library:S.args.length, trainer:S.sessions.length};
+  $('#nav').innerHTML = ROUTES.map(([k,l])=>`<button data-act="go" data-r="${k}" class="${ui.route===k?'on':''}" ${ui.route===k?'aria-current="page"':''}><span class="lbl">${l}</span>${counts[k]!=null?`<span class="cnt">${counts[k]}</span>`:''}</button>`).join('');
+}
+function loadingNote(){ return store.mode==='init' || (store.mode==='db' && store.loaded.size<COLS.length && !store.slow) ? '<p class="empty">Lade deine Einträge …</p>' : ''; }
+
+/* ---------- Dashboard ---------- */
+function weaknessReport(){
+  const recent = [...S.journal].sort(byDateDesc).slice(0,8);
+  const counts = {};
+  recent.forEach(e=>(e.weaknesses||[]).forEach(t=>counts[t]=(counts[t]||0)+1));
+  const tags = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([t,n])=>({t,n,of:recent.length, lvl:n>=3?'hi':n>=2?'':'lo'}));
+  const stats = skillStats().filter(s=>s.recent!=null).sort((a,b)=>a.recent-b.recent);
+  const low = stats.filter(s=>s.recent<6.5).slice(0,2);
+  return {tags, low, n:recent.length};
+}
+function vDashboard(){
+  const t = today();
+  const upcoming = S.motions.filter(m=>m.date && m.date>=t).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4);
+  const recent = [...S.motions.map(x=>['motions',x]), ...S.journal.map(x=>['journal',x]), ...S.args.map(x=>['args',x])].sort((a,b)=>byUpdated(a[1],b[1])).slice(0,6);
+  const hasEx = COLS.some(c=>S[c].some(x=>x.example));
+  const w = weaknessReport();
+  const goals = [...S.goals].sort((a,b)=>(a.done?1:0)-(b.done?1:0) || byUpdated(a,b));
+  const tasks = [...S.tasks].sort((a,b)=>(a.done?1:0)-(b.done?1:0) || String(a.due||'9').localeCompare(String(b.due||'9')));
+  const d = new Date().toLocaleDateString('de-AT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  return `
+  <header class="head">
+    <div><div class="eyebrow">${esc(d)}</div><h2>Dein Debattier-Cockpit</h2><p>Nach jeder Debatte: reflektieren, Argumente sichern, Schwächen gezielt trainieren.</p></div>
+    <div class="actions quick">
+      <button class="btn primary" data-act="new" data-col="journal">Debatte reflektieren</button>
+      <button class="btn" data-act="new" data-col="motions">Motion anlegen</button>
+      <button class="btn" data-act="new" data-col="args">Argument sichern</button>
+    </div>
+  </header>
+  ${loadingNote()}
+  ${hasEx ? `<div class="banner"><span>Einträge mit der Markierung <span class="chip ex">Beispiel</span> sind fiktive Anschauungsdaten, keine echte Debattenhistorie.</span><button class="btn danger" data-act="clearex">Beispieldaten entfernen</button></div>` : ''}
+  <section class="stats" aria-label="Kennzahlen">
+    <button class="stat" data-act="go" data-r="journal"><span class="eyebrow">Debatten dokumentiert</span><span class="n">${S.journal.length}</span><span class="sub">${S.journal.length ? 'zuletzt '+fmtDate([...S.journal].sort(byDateDesc)[0].date) : 'noch keine Reflexion'}</span></button>
+    <button class="stat" data-act="go" data-r="motions"><span class="eyebrow">Motions gespeichert</span><span class="n">${S.motions.length}</span><span class="sub">${S.motions.filter(m=>m.date&&m.date>=t).length} geplant</span></button>
+    <button class="stat" data-act="go" data-r="library"><span class="eyebrow">Argumente & Belege</span><span class="n">${S.args.length}</span><span class="sub">${new Set(S.args.map(a=>a.category)).size} Themengebiete</span></button>
+    <button class="stat" data-act="go" data-r="trainer"><span class="eyebrow">Trainingseinheiten</span><span class="n">${S.sessions.length}</span><span class="sub">mit dem KI-Trainer</span></button>
+  </section>
+  <div class="grid2">
+    <div class="col">
+      <section class="panel">
+        <div class="panel-h"><h3>Zuletzt bearbeitet</h3><span class="toolbar"><button class="mini" data-act="go" data-r="motions">Archiv</button><button class="mini" data-act="go" data-r="journal">Journal</button></span></div>
+        ${recent.length ? `<div class="rows">${recent.map(([c,x])=>`<button class="row" data-act="open" data-col="${c}" data-id="${x.id}"><span class="d">${fmtShort(x.date||dayOf(x.updatedAt))}</span><span class="t">${esc(clip(itemTitle(c,x),110))}</span><span class="m"><span class="chip">${COL_NAME[c]}</span>${exChip(x)}</span></button>`).join('')}</div>` : `<p class="empty"><b>Noch nichts erfasst.</b> Starte mit einer Motion aus deiner letzten Clubdebatte.</p>`}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h3>Anstehende Debatten</h3><button class="mini" data-act="new" data-col="motions">+ Motion</button></div>
+        ${upcoming.length ? `<div class="rows">${upcoming.map(m=>`<button class="row" data-act="open" data-col="motions" data-id="${m.id}"><span class="d">${fmtShort(m.date)}</span><span class="t">${esc(m.title)}</span><span class="m">${posChip(m.position)}${exChip(m)}</span><span class="s">${m.line||m.pro||m.contra ? 'Vorbereitung begonnen' : 'Noch keine Vorbereitung'}</span></button>`).join('')}</div>` : `<p class="empty">Keine geplanten Motions. Trage die nächste Clubdebatte mit Datum ein, um sie hier vorzubereiten.</p>`}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h3>Schnellnotiz</h3><span class="eyebrow">landet unter Wissen</span></div>
+        <div class="add-note"><textarea id="qnote" data-keep rows="2" placeholder="Idee, Formulierung, Beispiel aus der Zeitung …"></textarea><button class="btn" data-act="qnote">Ablegen</button></div>
+      </section>
+    </div>
+    <div class="col">
+      <section class="panel">
+        <div class="panel-h"><h3>Aktuelle Schwächen</h3><button class="mini" data-act="go" data-r="progress">Details</button></div>
+        ${w.tags.length || w.low.length ? `<div class="weak">
+          ${w.tags.slice(0,4).map(x=>`<div class="weak-i ${x.lvl}"><span class="bar"></span><span>${esc(x.t)}</span><span class="meta mono">${x.n}/${x.of} Debatten</span></div>`).join('')}
+          ${w.low.map(s=>`<div class="weak-i hi"><span class="bar"></span><span>${esc(s.label)}</span><span class="meta mono">Ø ${fmt1(s.recent)}</span></div>`).join('')}
+        </div>` : `<p class="empty">Erscheint, sobald du im Journal Schwächen markierst oder Kompetenzen bewertest.</p>`}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h3>Trainingsziele</h3><span class="mono faint">${goals.filter(g=>g.done).length}/${goals.length}</span></div>
+        ${goals.length ? `<div class="check">${goals.map(g=>checkItem('goals',g, g.skill?SKILL_LABEL[g.skill]:'' )).join('')}</div>` : `<p class="empty">Formuliere ein konkretes Ziel, z. B. „In jeder Rede explizites Weighing“.</p>`}
+        <div class="inline-add"><input type="text" id="goalIn" data-keep placeholder="Neues Ziel …" aria-label="Neues Ziel"><select id="goalSkill" aria-label="Kompetenz"><option value="">Kompetenz</option>${SKILLS.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select><button class="btn" data-act="addgoal">Hinzufügen</button></div>
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h3>Nächste Trainingsaufgaben</h3><button class="mini" data-act="suggest">KI-Vorschläge</button></div>
+        ${tasks.length ? `<div class="check">${tasks.map(x=>checkItem('tasks',x, [x.due?'bis '+fmtShort(x.due):'', x.source||''].filter(Boolean).join(' · '))).join('')}</div>` : `<p class="empty">Noch keine Aufgaben. Lass dir aus deinen Schwächen Übungen vorschlagen.</p>`}
+        ${ui.suggestions ? suggestionsHtml() : ''}
+        <div class="inline-add"><input type="text" id="taskIn" data-keep placeholder="Neue Aufgabe …" aria-label="Neue Aufgabe"><input type="date" id="taskDue" aria-label="Fällig am"><button class="btn" data-act="addtask">Hinzufügen</button></div>
+      </section>
+    </div>
+  </div>`;
+}
+function checkItem(col, x, meta){
+  return `<div class="check-i ${x.done?'done':''}"><input type="checkbox" data-act="toggle" data-col="${col}" data-id="${x.id}" ${x.done?'checked':''} aria-label="Erledigt"><div><div class="tx">${esc(x.text)} ${exChip(x)}</div>${meta?`<div class="meta">${esc(meta)}</div>`:''}</div><button class="x" data-act="delq" data-col="${col}" data-id="${x.id}" aria-label="Entfernen" title="Entfernen">×</button></div>`;
+}
+function suggestionsHtml(){
+  const s = ui.suggestions;
+  if(s.loading) return '<p class="empty">Die KI analysiert deine Schwächen …</p>';
+  if(s.error) return `<p class="empty">${esc(s.error)}</p>`;
+  return `<div class="linked">${s.items.map((t,i)=>`<button data-act="takesug" data-i="${i}"><span><span class="lt">${esc(t.text)}</span><div class="ls">${esc(t.why||'')}${t.skill&&SKILL_LABEL[t.skill]?' · '+SKILL_LABEL[t.skill]:''}</div></span><span class="mini">übernehmen</span></button>`).join('')}</div>`;
+}
+
+/* ---------- Motion-Archiv ---------- */
+function motionStatus(m){ return m.date && m.date>=today() ? 'Geplant' : 'Vergangen'; }
+function vMotions(){
+  const f = ui.mf, q = f.q.toLowerCase();
+  let list = S.motions.filter(m=>{
+    if(f.cat && m.category!==f.cat) return false;
+    if(f.pos && m.position!==f.pos) return false;
+    if(f.time==='past' && motionStatus(m)!=='Vergangen') return false;
+    if(f.time==='future' && motionStatus(m)!=='Geplant') return false;
+    if(q){ const hay = [m.title,m.definition,m.pro,m.contra,m.line,m.rebuttals,m.insights,m.improve,(m.tags||[]).join(' '),(m.notes||[]).map(n=>n.text).join(' ')].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  });
+  const sorters = {'date-desc':byDateDesc, 'date-asc':(a,b)=>-byDateDesc(a,b), 'alpha':(a,b)=>a.title.localeCompare(b.title,'de'), 'cat':(a,b)=>(a.category||'').localeCompare(b.category||'','de') || byDateDesc(a,b)};
+  list.sort(sorters[f.sort]||byDateDesc);
+  const jc = id => S.journal.filter(j=>j.motionId===id).length;
+  const rowH = m => `<button class="row" data-act="open" data-col="motions" data-id="${m.id}"><span class="d">${fmtShort(m.date)}</span><span class="t">${esc(m.title)}</span><span class="m">${posChip(m.position)}<span class="chip">${esc(m.category||'ohne Thema')}</span>${motionStatus(m)==='Geplant'?'<span class="chip on">Geplant</span>':''}${exChip(m)}</span>${(jc(m.id)||(m.argIds||[]).length)?`<span class="s">${jc(m.id)?jc(m.id)+' Reflexion'+(jc(m.id)>1?'en':''):''}${jc(m.id)&&(m.argIds||[]).length?' · ':''}${(m.argIds||[]).length?(m.argIds.length+' verknüpfte Argumente'):''}</span>`:''}</button>`;
+  let body;
+  if(!list.length) body = S.motions.length ? '<p class="empty">Keine Motion passt zu diesen Filtern.</p>' : '<p class="empty"><b>Das Archiv ist leer.</b> Lege vergangene Clubdebatten nachträglich an oder plane die nächste.</p>';
+  else if(f.sort==='cat'){
+    const groups = {}; list.forEach(m=>(groups[m.category||'Ohne Themengebiet'] ||= []).push(m));
+    body = Object.entries(groups).map(([g,ms])=>`<div class="group-h eyebrow">${esc(g)} · ${ms.length}</div><div class="rows">${ms.map(rowH).join('')}</div>`).join('');
+  } else body = `<div class="rows">${list.map(rowH).join('')}</div>`;
+  return `
+  <header class="head"><div><div class="eyebrow">Modul A</div><h2>Motion-Archiv</h2><p>Vergangene und geplante Motions mit Definition, Argumenten beider Seiten, deiner Linie und deinen Erkenntnissen.</p></div>
+    <div class="actions"><button class="btn primary" data-act="new" data-col="motions">Motion anlegen</button></div></header>
+  ${loadingNote()}
+  <div class="toolbar">
+    <input type="search" id="mf_q" data-filter="mf.q" value="${esc(f.q)}" placeholder="Motion, Argument, Erkenntnis suchen …" aria-label="Suchen">
+    <select id="mf_cat" data-filter="mf.cat" aria-label="Themengebiet"><option value="">Alle Themengebiete</option>${CATS.map(c=>`<option ${f.cat===c?'selected':''}>${c}</option>`).join('')}</select>
+    <select id="mf_pos" data-filter="mf.pos" aria-label="Position"><option value="">Pro & Contra</option><option ${f.pos==='Pro'?'selected':''}>Pro</option><option ${f.pos==='Contra'?'selected':''}>Contra</option><option ${f.pos==='Offen'?'selected':''}>Offen</option></select>
+    <div class="seg" role="group" aria-label="Zeitraum">${[['all','Alle'],['past','Vergangen'],['future','Geplant']].map(([k,l])=>`<button data-act="setf" data-f="mf.time" data-v="${k}" class="${f.time===k?'on':''}">${l}</button>`).join('')}</div>
+    <select id="mf_sort" data-filter="mf.sort" aria-label="Sortierung"><option value="date-desc" ${f.sort==='date-desc'?'selected':''}>Neueste zuerst</option><option value="date-asc" ${f.sort==='date-asc'?'selected':''}>Älteste zuerst</option><option value="cat" ${f.sort==='cat'?'selected':''}>Nach Themengebiet</option><option value="alpha" ${f.sort==='alpha'?'selected':''}>Alphabetisch</option></select>
+  </div>
+  <section class="panel"><div class="panel-h"><span class="eyebrow">${list.length} von ${S.motions.length} Motions</span></div>${body}</section>`;
+}
+
+/* ---------- Journal ---------- */
+function ratingAvg(r){ if(!r) return null; const v = Object.values(r).filter(x=>x>0); return avg(v); }
+function vJournal(){
+  const f = ui.jf, q = f.q.toLowerCase();
+  const list = S.journal.filter(e=>{
+    if(f.tag && !(e.weaknesses||[]).includes(f.tag)) return false;
+    if(q){ const hay = [journalTitle(e),e.wentWell,e.struggles,e.worked,e.refuted,e.style,e.takeaway,(e.notes||[]).map(n=>n.text).join(' ')].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  }).sort(byDateDesc);
+  const tags = [...new Set(S.journal.flatMap(e=>e.weaknesses||[]))].sort((a,b)=>a.localeCompare(b,'de'));
+  return `
+  <header class="head"><div><div class="eyebrow">Modul B</div><h2>Debattenjournal</h2><p>Deine Reflexion nach jeder Debatte. Verknüpft mit der Motion, den verwendeten Argumenten und deiner Kompetenzentwicklung.</p></div>
+    <div class="actions"><button class="btn primary" data-act="new" data-col="journal">Debatte reflektieren</button></div></header>
+  ${loadingNote()}
+  <div class="toolbar">
+    <input type="search" id="jf_q" data-filter="jf.q" value="${esc(f.q)}" placeholder="In Reflexionen suchen …" aria-label="Suchen">
+    <select id="jf_tag" data-filter="jf.tag" aria-label="Schwäche"><option value="">Alle Schwächen</option>${tags.map(t=>`<option ${f.tag===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+  </div>
+  ${list.length ? `<div class="cards">${list.map(e=>{ const a = ratingAvg(e.ratings); return `<button class="card" data-act="open" data-col="journal" data-id="${e.id}">
+    <div class="meta-line"><span class="mono">${fmtDate(e.date)}</span>${posChip(e.position)}${e.result&&e.result!=='—'?`<span class="chip">${esc(e.result)}</span>`:''}${exChip(e)}</div>
+    <h4>${esc(journalTitle(e))}</h4>
+    ${e.takeaway?`<p>${esc(e.takeaway)}</p>`:e.wentWell?`<p>${esc(e.wentWell)}</p>`:''}
+    <div class="chips">${(e.weaknesses||[]).slice(0,4).map(t=>`<span class="chip">${esc(t)}</span>`).join('')}</div>
+    <div class="foot"><span>${e.role?esc(e.role):''}</span><span class="mono">${a!=null?'Ø '+fmt1(a):''}</span></div></button>`; }).join('')}</div>`
+  : `<section class="panel"><p class="empty">${S.journal.length ? 'Keine Reflexion passt zu diesen Filtern.' : '<b>Noch keine Reflexion.</b> Direkt nach der Debatte fünf Minuten investieren lohnt sich am meisten.'}</p></section>`}`;
+}
+
+/* ---------- Argumentationsbibliothek ---------- */
+function dots(n){ n = +n||0; return `<span class="dots" aria-label="Stärke ${n} von 5">${'●'.repeat(n)}<span class="off">${'●'.repeat(5-n)}</span></span>`; }
+function usedIn(argId){
+  return [...S.motions.filter(m=>(m.argIds||[]).includes(argId)).map(m=>['motions',m]), ...S.journal.filter(j=>(j.argIds||[]).includes(argId)).map(j=>['journal',j])];
+}
+function vLibrary(){
+  const f = ui.lf, q = f.q.toLowerCase();
+  const list = S.args.filter(a=>{
+    if(f.cat && a.category!==f.cat) return false;
+    if(f.type && a.type!==f.type) return false;
+    if(f.side && a.side!==f.side) return false;
+    if(q){ const hay = [a.title,a.claim,a.reasoning,a.evidence,a.impact,a.source,(a.tags||[]).join(' ')].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  }).sort(byUpdated);
+  const cnt = c => S.args.filter(a=>a.category===c).length;
+  return `
+  <header class="head"><div><div class="eyebrow">Modul C</div><h2>Argumentationsbibliothek</h2><p>Deine besten Argumente, Beispiele, Statistiken, Studien und Frameworks, mit Quelle. Beim Bearbeiten einer Motion direkt einfügbar.</p></div>
+    <div class="actions"><button class="btn primary" data-act="new" data-col="args">Eintrag anlegen</button></div></header>
+  ${loadingNote()}
+  <div class="chips" role="group" aria-label="Themengebiet"><button class="chip ${!f.cat?'on':''}" data-act="setf" data-f="lf.cat" data-v="">Alle · ${S.args.length}</button>${CATS.map(c=>`<button class="chip ${f.cat===c?'on':''}" data-act="setf" data-f="lf.cat" data-v="${esc(c)}">${c} · ${cnt(c)}</button>`).join('')}</div>
+  <div class="toolbar">
+    <input type="search" id="lf_q" data-filter="lf.q" value="${esc(f.q)}" placeholder="These, Beleg, Quelle suchen …" aria-label="Suchen">
+    <select id="lf_type" data-filter="lf.type" aria-label="Typ"><option value="">Alle Typen</option>${ARG_TYPES.map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}</select>
+    <select id="lf_side" data-filter="lf.side" aria-label="Tendenz"><option value="">Jede Tendenz</option>${['Neutral','Eher Pro','Eher Contra'].map(t=>`<option ${f.side===t?'selected':''}>${t}</option>`).join('')}</select>
+  </div>
+  ${list.length ? `<div class="cards">${list.map(a=>{ const u = usedIn(a.id).length; return `<button class="card" data-act="open" data-col="args" data-id="${a.id}">
+    <div class="meta-line"><span class="eyebrow">${esc(a.type||'Argument')}</span>${exChip(a)}</div>
+    <h4>${esc(a.title)}</h4>${a.claim?`<p>${esc(a.claim)}</p>`:''}
+    <div class="foot"><span>${esc(a.category||'')}${u?` · ${u}× verwendet`:''}</span>${dots(a.strength)}</div></button>`; }).join('')}</div>`
+  : `<section class="panel"><p class="empty">${S.args.length ? 'Kein Eintrag passt zu diesen Filtern.' : '<b>Die Bibliothek ist leer.</b> Sichere hier jedes Argument, das in einer Debatte funktioniert hat, und jeden Beleg, den du wiederverwenden willst.'}</p></section>`}`;
+}
+
+/* ---------- Fortschritt ---------- */
+function skillPoints(){
+  const pts = [];
+  const has = r => r && Object.values(r).some(v=>+v>0);
+  S.journal.forEach(e=>{ if(has(e.ratings)) pts.push({date:e.date||dayOf(e.createdAt), scores:e.ratings, src:'Journal', col:'journal', id:e.id, label:journalTitle(e), example:e.example}); });
+  S.assessments.forEach(a=>{ if(has(a.ratings)) pts.push({date:a.date||dayOf(a.createdAt), scores:a.ratings, src:'Selbsteinschätzung', col:'assessments', id:a.id, label:a.note||'', example:a.example}); });
+  S.sessions.forEach(s=>{ if(s.feedback && has(s.feedback.scores)) pts.push({date:s.date||dayOf(s.createdAt), scores:s.feedback.scores, src:'KI-Trainer', col:'sessions', id:s.id, label:itemTitle('sessions',s), example:s.example}); });
+  return pts.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function skillStats(){
+  const pts = skillPoints();
+  return SKILLS.map(([k,label],i)=>{
+    const vals = pts.filter(p=>+p.scores[k]>0).map(p=>({date:p.date, v:+p.scores[k]}));
+    const last5 = vals.slice(-5).map(x=>x.v), prev5 = vals.slice(-10,-5).map(x=>x.v);
+    const recent = avg(last5), prev = avg(prev5);
+    return {k, label, i, vals, all:avg(vals.map(x=>x.v)), recent, prev, trend: recent!=null&&prev!=null ? recent-prev : null};
+  });
+}
+function chartSvg(stats){
+  const W = 760, H = 270, L = 34, R = 18, T = 14, B = 30;
+  const shown = stats.filter(s=>ui.pf.on.has(s.k) && s.vals.length);
+  const dates = [...new Set(shown.flatMap(s=>s.vals.map(v=>v.date)))].sort();
+  if(!dates.length) return '<p class="empty">Noch keine Bewertungen. Bewerte dich im Journal, per Selbsteinschätzung oder lass den KI-Trainer bewerten.</p>';
+  const t0 = new Date(dates[0]+'T12:00').getTime(), t1 = new Date(dates[dates.length-1]+'T12:00').getTime();
+  const x = d => { const t = new Date(d+'T12:00').getTime(); return t1===t0 ? L+(W-L-R)/2 : L + (t-t0)/(t1-t0)*(W-L-R); };
+  const y = v => T + (10-v)/10*(H-T-B);
+  let g = '';
+  for(let v=0; v<=10; v+=2) g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line)" stroke-width="1"/><text x="${L-8}" y="${y(v)+3.5}" text-anchor="end">${v}</text>`;
+  const ticks = dates.length<=4 ? dates : [dates[0], dates[Math.floor(dates.length/3)], dates[Math.floor(2*dates.length/3)], dates[dates.length-1]];
+  [...new Set(ticks)].forEach((d,i,arr)=>{ const anchor = arr.length===1 ? 'middle' : i===0 ? 'start' : i===arr.length-1 ? 'end' : 'middle'; g += `<text x="${x(d)}" y="${H-8}" text-anchor="${anchor}">${fmtShort(d)}</text>`; });
+  shown.forEach(s=>{
+    const c = `var(--s${s.i+1})`;
+    const pts = s.vals.map(v=>[x(v.date), y(v.v), v]);
+    if(pts.length>1) g += `<polyline style="fill:none;stroke:${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"/>`;
+    pts.forEach((p,j)=>{ const last = j===pts.length-1; g += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${last?4.5:3}" style="fill:${last?c:'var(--panel)'};stroke:${c}" stroke-width="2"><title>${esc(s.label)}: ${p[2].v} (${fmtDate(p[2].date)})</title></circle>`; });
+  });
+  return `<div class="chart-wrap chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kompetenzverlauf über die Zeit">${g}</svg></div>`;
+}
+function spark(vals){
+  if(vals.length<2) return '<span class="faint">—</span>';
+  const w = 90, h = 22, n = vals.length;
+  const p = vals.map((v,i)=>[(i/(n-1))*(w-4)+2, h-2-(v.v/10)*(h-4)]);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline style="fill:none;stroke:var(--brass)" stroke-width="1.5" points="${p.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ')}"/><circle cx="${p[n-1][0]}" cy="${p[n-1][1]}" r="2.5" style="fill:var(--brass)"/></svg>`;
+}
+function vProgress(){
+  const stats = skillStats(), pts = skillPoints();
+  const allC = {}, recC = {};
+  const recentJ = [...S.journal].sort(byDateDesc).slice(0,5);
+  S.journal.forEach(e=>(e.weaknesses||[]).forEach(t=>allC[t]=(allC[t]||0)+1));
+  recentJ.forEach(e=>(e.weaknesses||[]).forEach(t=>recC[t]=(recC[t]||0)+1));
+  const wl = Object.entries(allC).sort((a,b)=>b[1]-a[1]);
+  const maxW = wl.length ? wl[0][1] : 1;
+  const an = ui.analysis;
+  return `
+  <header class="head"><div><div class="eyebrow">Modul E</div><h2>Fortschritt</h2><p>Sieben Kompetenzen aus Journal, Selbsteinschätzungen und KI-Bewertungen. Skala 1–10; 7 entspricht solider Clubleistung.</p></div>
+    <div class="actions"><button class="btn" data-act="analyze">Muster erkennen (KI)</button><button class="btn primary" data-act="new" data-col="assessments">Selbsteinschätzung</button></div></header>
+  ${loadingNote()}
+  ${an ? `<section class="fb"><div class="panel-h"><h3>Analyse deiner Muster</h3><button class="mini" data-act="closeanalysis">schließen</button></div>${an.loading?'<p class="muted">Die KI liest deine Reflexionen …</p>':an.error?`<p>${esc(an.error)}</p>`:`<div class="prose">${md(an.text)}</div>`}</section>` : ''}
+  <section class="panel">
+    <div class="panel-h"><h3>Verlauf</h3><span class="mono faint">${pts.length} Bewertungen</span></div>
+    <div class="legend">${stats.map(s=>`<button class="chip ${ui.pf.on.has(s.k)?'on':''}" data-act="toggleskill" data-k="${s.k}"><i style="background:var(--s${s.i+1})"></i>${s.label}</button>`).join('')}</div>
+    ${chartSvg(stats)}
+  </section>
+  <section class="panel">
+    <div class="panel-h"><h3>Kompetenzen im Überblick</h3></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Kompetenz</th><th class="num">Ø gesamt</th><th class="num">Ø letzte 5</th><th class="num">Trend</th><th class="num">Bewertungen</th><th>Verlauf</th></tr></thead><tbody>
+    ${stats.map(s=>{ const tr = s.trend; const cls = tr==null?'flat':tr>0.2?'up':tr<-0.2?'down':'flat'; const sym = tr==null?'—':(tr>0?'▲ +':tr<0?'▼ ':'● ')+fmt1(tr); return `<tr><td>${s.label}</td><td class="num">${fmt1(s.all)}</td><td class="num">${fmt1(s.recent)}</td><td class="num ${cls}">${sym}</td><td class="num">${s.vals.length}</td><td>${spark(s.vals)}</td></tr>`; }).join('')}
+    </tbody></table></div>
+  </section>
+  <div class="grid2">
+    <section class="panel">
+      <div class="panel-h"><h3>Wiederkehrende Schwächen</h3><span class="eyebrow">alle Debatten · letzte 5</span></div>
+      ${wl.length ? `<div class="hbars">${wl.map(([t,n])=>{ const r = recC[t]||0; return `<div class="hbar"><span>${esc(t)}</span><span class="track"><i class="${r>=2?'hi':''}" style="width:${(n/maxW*100).toFixed(0)}%"></i></span><span class="mono">${n}${r?`·${r}`:''}</span></div>`; }).join('')}</div><p class="faint" style="font-size:12px">Rot: in mindestens zwei der letzten fünf Debatten aufgetreten.</p>` : '<p class="empty">Markiere im Journal beobachtete Schwächen, um Muster zu sehen.</p>'}
+    </section>
+    <section class="panel">
+      <div class="panel-h"><h3>Alle Bewertungen</h3></div>
+      ${pts.length ? `<div class="tbl-wrap"><table class="tbl timeline-tbl" style="min-width:420px"><thead><tr><th>Datum</th><th>Quelle</th><th class="num">Ø</th><th></th></tr></thead><tbody>${[...pts].reverse().map(p=>`<tr><td class="mono">${fmtShort(p.date)}</td><td>${esc(p.src)} ${p.example?'<span class="chip ex">Beispiel</span>':''}<div class="faint" style="font-size:12px">${esc(clip(p.label,60))}</div></td><td class="num">${fmt1(ratingAvg(p.scores))}</td><td><button class="mini" data-act="open" data-col="${p.col}" data-id="${p.id}">öffnen</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Noch keine Bewertungen.</p>'}
+    </section>
+  </div>`;
+}
+
+/* ---------- Wissen ---------- */
+function vKnowledge(){
+  const q = ui.kb.q.toLowerCase().trim();
+  const strip = s => s.replace(/<[^>]+>/g,' ');
+  const blockText = b => (b.h+' '+(b.b?strip(b.b):'')+' '+(b.dl?b.dl.flat().join(' '):'')).toLowerCase();
+  const own = S.notes;
+  const renderBlock = b => `<div class="kb-block"><h4>${esc(b.h)}</h4>${b.b?`<div class="prose">${b.b}</div>`:''}${b.dl?`<dl>${b.dl.filter(d=>!q||d.join(' ').toLowerCase().includes(q)||b.h.toLowerCase().includes(q)).map(([n,d,ex,ct])=>`<div><dt>${esc(n)}</dt><dd>${esc(d)}<br><em>Beispiel: ${esc(ex)}</em><br><span class="ctr">Konter: ${esc(ct)}</span></dd></div>`).join('')}</dl>`:''}</div>`;
+  const ownHtml = secId => { const ns = own.filter(n=>(n.section||'inbox')===secId && (!q || (n.title+' '+n.body).toLowerCase().includes(q))).sort(byUpdated);
+    return ns.map(n=>`<div class="note"><div class="meta-line"><strong style="color:var(--ink)">${esc(n.title||'Notiz')}</strong><span class="when">${fmtShort(dayOf(n.updatedAt))}</span>${exChip(n)}<button class="mini" data-act="edit" data-col="notes" data-id="${n.id}">bearbeiten</button></div><div class="prose">${md(n.body||'')}</div></div>`).join(''); };
+  let body;
+  if(q){
+    const hits = KB.map(s=>({s, bl:s.blocks.filter(b=>blockText(b).includes(q))})).filter(x=>x.bl.length);
+    const ownHits = own.filter(n=>(n.title+' '+n.body).toLowerCase().includes(q));
+    body = (hits.length||ownHits.length) ? hits.map(x=>`<div class="eyebrow">${esc(x.s.title)}</div>${x.bl.map(renderBlock).join('')}`).join('') + (ownHits.length?`<div class="kb-own"><div class="eyebrow">Eigene Notizen</div>${[...new Set(ownHits.map(n=>n.section||'inbox'))].map(ownHtml).join('')}</div>`:'') : '<p class="empty">Nichts gefunden.</p>';
+  } else {
+    const secs = [...KB, {id:'inbox', title:'Eigene Notizen', blocks:[]}];
+    const s = secs.find(x=>x.id===ui.kb.sec) || KB[0];
+    body = `<h3 style="font-size:26px">${esc(s.title)}</h3>${s.blocks.map(renderBlock).join('')}
+      <div class="kb-own"><div class="panel-h"><h3 style="font-size:17px">${s.id==='inbox'?'Schnellnotizen & eigene Einträge':'Eigene Ergänzungen'}</h3></div>
+      ${ownHtml(s.id) || '<p class="empty">Ergänze hier eigene Formulierungen, Beispiele oder Beobachtungen aus Clubabenden.</p>'}
+      <div class="kb-add"><input type="text" id="kbTitle" data-keep placeholder="Titel (optional)" aria-label="Titel"><textarea id="kbBody" data-keep rows="3" placeholder="Eigene Ergänzung …" aria-label="Ergänzung"></textarea><div><button class="btn" data-act="kbadd" data-sec="${s.id}">Ergänzung speichern</button></div></div></div>`;
+  }
+  const inboxN = own.filter(n=>(n.section||'inbox')==='inbox').length;
+  return `
+  <header class="head"><div><div class="eyebrow">Modul F</div><h2>Wissen & Frameworks</h2><p>Dein Nachschlagewerk zu Redeaufbau, Modellen, Rhetorik, Fehlschlüssen und Strategien, mit eigenen Ergänzungen.</p></div></header>
+  <div class="toolbar"><input type="search" id="kb_q" data-filter="kb.q" value="${esc(ui.kb.q)}" placeholder="Im Nachschlagewerk suchen …" aria-label="Im Nachschlagewerk suchen"></div>
+  <div class="kb">
+    <nav class="toc" aria-label="Kapitel">${KB.map(s=>`<button class="${!q&&ui.kb.sec===s.id?'on':''}" data-act="kbsec" data-sec="${s.id}">${esc(s.title)}</button>`).join('')}<button class="${!q&&ui.kb.sec==='inbox'?'on':''}" data-act="kbsec" data-sec="inbox">Eigene Notizen${inboxN?` · ${inboxN}`:''}</button></nav>
+    <div class="kb-body">${body}</div>
+  </div>`;
+}
+
+/* ---------- Globale Suche ---------- */
+function vSearch(){
+  const q = ui.gq.toLowerCase().trim();
+  const hits = [];
+  if(q) ['motions','journal','args','notes','sessions'].forEach(c=>S[c].forEach(x=>{ const hay = JSON.stringify(x).toLowerCase(); if(hay.includes(q)) hits.push([c,x]); }));
+  return `<header class="head"><div><div class="eyebrow">Suche</div><h2>„${esc(ui.gq)}“</h2><p>${hits.length} Treffer in Motions, Journal, Argumenten, Notizen und Trainings.</p></div></header>
+  <section class="panel">${hits.length ? `<div class="rows">${hits.map(([c,x])=>`<button class="row" data-act="open" data-col="${c}" data-id="${x.id}"><span class="d">${fmtShort(x.date||dayOf(x.updatedAt))}</span><span class="t">${esc(clip(itemTitle(c,x),110))}</span><span class="m"><span class="chip">${COL_NAME[c]}</span>${exChip(x)}</span></button>`).join('')}</div>` : '<p class="empty">Keine Treffer.</p>'}</section>`;
+}
+
+/* =========================================================
+   Formulare (Schema-basiert)
+   ========================================================= */
+const SCHEMA = {
+  motions:[
+    {k:'title',l:'Motion / Debattenfrage',t:'text',req:1,ph:'DH würde …'},
+    {row:[{k:'date',l:'Datum der Debatte',t:'date'},{k:'category',l:'Themengebiet',t:'select',opts:['',...CATS]},{k:'position',l:'Eigene Position',t:'select',opts:['Pro','Contra','Offen']}]},
+    {row:[{k:'format',l:'Format',t:'select',opts:['BPS','OPD','Andere']},{k:'role',l:'Rolle',t:'text',list:'roles',ph:'z. B. Eröffnende Opposition (LO)'}]},
+    {k:'definition',l:'Definition & Kontext',t:'area',rows:3},
+    {k:'pro',l:'Wichtigste Pro-Argumente',t:'area',lib:1,hint:'ein Argument pro Absatz'},
+    {k:'contra',l:'Wichtigste Contra-Argumente',t:'area',lib:1},
+    {k:'line',l:'Eigene Argumentationslinie',t:'area',lib:1},
+    {k:'rebuttals',l:'Gegenargumente & Rebuttals',t:'area',lib:1},
+    {k:'insights',l:'Erkenntnisse nach der Debatte',t:'area',rows:3},
+    {k:'improve',l:'Was ich nächstes Mal besser mache',t:'area',rows:3},
+    {k:'argIds',l:'Verknüpfte Argumente aus der Bibliothek',t:'links'},
+    {k:'tags',l:'Schlagwörter',t:'tags',opts:[]}
+  ],
+  journal:[
+    {k:'motionId',l:'Motion',t:'motion'},
+    {row:[{k:'date',l:'Datum',t:'date'},{k:'position',l:'Meine Seite',t:'select',opts:['Pro','Contra']},{k:'result',l:'Ergebnis',t:'select',opts:RESULTS}]},
+    {k:'role',l:'Rolle',t:'text',list:'roles',ph:'z. B. Schließende Regierung (MG)'},
+    {k:'wentWell',l:'Was lief gut?',t:'area',rows:3},
+    {k:'struggles',l:'Wo hatte ich Schwierigkeiten?',t:'area',rows:3},
+    {k:'worked',l:'Welche Argumente haben funktioniert?',t:'area',rows:3},
+    {k:'refuted',l:'Wo wurde ich widerlegt?',t:'area',rows:3},
+    {k:'style',l:'Struktur & Rhetorik',t:'area',rows:3},
+    {k:'takeaway',l:'Was nehme ich mit?',t:'area',rows:2},
+    {k:'weaknesses',l:'Beobachtete Schwächen',t:'tags',opts:WEAK_TAGS},
+    {k:'ratings',l:'Selbsteinschätzung dieser Debatte',t:'ratings'},
+    {k:'argIds',l:'Verwendete Argumente aus der Bibliothek',t:'links'}
+  ],
+  args:[
+    {k:'title',l:'Titel / Kernaussage',t:'text',req:1},
+    {row:[{k:'category',l:'Themengebiet',t:'select',opts:CATS},{k:'type',l:'Typ',t:'select',opts:ARG_TYPES}]},
+    {row:[{k:'side',l:'Tendenz',t:'select',opts:['Neutral','Eher Pro','Eher Contra']},{k:'strength',l:'Stärke (1–5)',t:'select',opts:['3','1','2','4','5']}]},
+    {k:'claim',l:'These',t:'area',rows:2},
+    {k:'reasoning',l:'Begründung / Mechanismus',t:'area',rows:4},
+    {k:'evidence',l:'Beleg, Beispiel oder Daten',t:'area',rows:3},
+    {k:'impact',l:'Impact & Weighing',t:'area',rows:2},
+    {k:'source',l:'Quelle',t:'text',ph:'Autor, Titel, Jahr, Link'},
+    {k:'tags',l:'Schlagwörter',t:'tags',opts:[]}
+  ],
+  assessments:[
+    {k:'date',l:'Datum',t:'date'},
+    {k:'ratings',l:'Kompetenzen',t:'ratings'},
+    {k:'note',l:'Kommentar',t:'area',rows:3}
+  ],
+  notes:[
+    {k:'section',l:'Kapitel',t:'select',opts:['inbox',...KB.map(s=>s.id)],labels:{inbox:'Eigene Notizen',...Object.fromEntries(KB.map(s=>[s.id,s.title]))}},
+    {k:'title',l:'Titel',t:'text'},
+    {k:'body',l:'Inhalt',t:'area',rows:8}
+  ]
+};
+const flat = sch => sch.flatMap(f=>f.row ? f.row : [f]);
+
+function fieldHtml(f, v, draft){
+  const id = 'f_'+f.k;
+  const lab = `<label for="${id}">${esc(f.l)}${f.hint?`<span class="hint">${esc(f.hint)}</span>`:''}</label>`;
+  switch(f.t){
+    case 'text': return `<div class="fld">${lab}<input id="${id}" type="text" value="${esc(v)}" ${f.req?'required':''} placeholder="${esc(f.ph||'')}" ${f.list?`list="${f.list}"`:''}></div>`;
+    case 'date': return `<div class="fld">${lab}<input id="${id}" type="date" value="${esc(v)}"></div>`;
+    case 'select': return `<div class="fld">${lab}<select id="${id}">${f.opts.map(o=>`<option value="${esc(o)}" ${String(v)===String(o)?'selected':''}>${esc(f.labels?f.labels[o]:(o===''?'— wählen —':o))}</option>`).join('')}</select></div>`;
+    case 'area': return `<div class="fld"><div class="lab"><label for="${id}">${esc(f.l)}${f.hint?` <span class="hint">· ${esc(f.hint)}</span>`:''}</label>${f.lib?`<button type="button" class="mini" data-act="libpick" data-k="${f.k}">+ aus Bibliothek</button>`:''}</div>${f.lib?`<div class="picker" id="pick_${f.k}" hidden></div>`:''}<textarea id="${id}" rows="${f.rows||4}">${esc(v)}</textarea></div>`;
+    case 'tags': {
+      const cur = v || [];
+      const all = [...new Set([...(f.opts||[]), ...cur])];
+      return `<div class="fld"><span class="lab">${esc(f.l)}</span><div class="chips" data-tagk="${f.k}">${all.map(t=>`<button type="button" class="chip ${cur.includes(t)?'on':''}" data-act="tagtoggle" data-v="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+        <div class="inline-add"><input type="text" id="tagin_${f.k}" placeholder="Eigenes hinzufügen und Enter drücken" data-tagadd="${f.k}" aria-label="Eigenes Schlagwort"></div></div>`;
+    }
+    case 'links': {
+      const cur = v || [];
+      const args = [...S.args].sort((a,b)=>a.title.localeCompare(b.title,'de'));
+      return `<div class="fld"><span class="lab">${esc(f.l)} <span class="hint">${cur.length} gewählt</span></span>${args.length ? `<div class="linklist">${args.map(a=>`<label><input type="checkbox" name="${id}" value="${a.id}" ${cur.includes(a.id)?'checked':''}> <span>${esc(a.title)} <span class="faint">· ${esc(a.category||'')}</span></span></label>`).join('')}</div>` : '<p class="empty">Noch keine Einträge in der Bibliothek.</p>'}</div>`;
+    }
+    case 'ratings': {
+      const r = v || {};
+      return `<div class="fld"><span class="lab">${esc(f.l)}<span class="hint">0 = nicht bewertet</span></span><div class="sliders">${SKILLS.map(([k,l])=>`<div class="slider"><label for="${id}_${k}">${l}</label><input type="range" id="${id}_${k}" min="0" max="10" step="1" value="${+r[k]||0}" data-out="${id}_${k}_o"><output id="${id}_${k}_o">${+r[k]||'–'}</output></div>`).join('')}</div></div>`;
+    }
+    case 'motion': {
+      const ms = [...S.motions].sort(byDateDesc);
+      const pre = draft && draft.newMotion;
+      return `<div class="fld">${lab}<select id="${id}"><option value="">— keine Motion verknüpfen —</option><option value="__new" ${pre?'selected':''}>+ Neue Motion anlegen …</option>${ms.map(m=>`<option value="${m.id}" ${v===m.id?'selected':''}>${esc(clip(m.title,80))} (${fmtShort(m.date)})</option>`).join('')}</select>
+        <input type="text" id="f_newMotion" placeholder="Wortlaut der neuen Motion" ${pre?'':'hidden'} value="${esc(pre||'')}" aria-label="Wortlaut der neuen Motion"></div>`;
+    }
+  }
+  return '';
+}
+function formHtml(col, item, draft){
+  const sch = SCHEMA[col];
+  return sch.map(f=>f.row ? `<div class="frow">${f.row.map(g=>fieldHtml(g, item[g.k], draft)).join('')}</div>` : fieldHtml(f, item[f.k], draft)).join('');
+}
+function collect(col){
+  const o = {};
+  for(const f of flat(SCHEMA[col])){
+    const id = 'f_'+f.k;
+    if(f.t==='tags') o[f.k] = [...document.querySelectorAll(`[data-tagk="${f.k}"] .chip.on`)].map(c=>c.dataset.v);
+    else if(f.t==='links') o[f.k] = [...document.querySelectorAll(`input[name="${id}"]:checked`)].map(c=>c.value);
+    else if(f.t==='ratings'){ o[f.k] = {}; SKILLS.forEach(([k])=>{ o[f.k][k] = +document.getElementById(id+'_'+k).value || 0; }); }
+    else { const el = document.getElementById(id); o[f.k] = el ? el.value.trim() : ''; }
+  }
+  if(o.strength) o.strength = +o.strength;
+  return o;
+}
+
+/* =========================================================
+   Sheet: Detail & Editor
+   ========================================================= */
+function openSheet(s){ ui.sheet = s; $('#sheet').hidden = false; document.body.style.overflow = 'hidden'; renderSheet(true); }
+function closeSheet(){ ui.sheet = null; $('#sheet').hidden = true; document.body.style.overflow = ''; }
+function renderSheet(first){
+  const s = ui.sheet; if(!s) return;
+  const p = $('#sheetPanel');
+  if(s.kind==='edit'){ p.innerHTML = editorHtml(s); if(first){ p.scrollTop = 0; const f = p.querySelector('input,textarea,select'); if(f) f.focus({preventScroll:true}); } return; }
+  if(s.kind==='raw'){ p.innerHTML = s.html; return; }
+  const it = get(s.col, s.id);
+  if(!it){ p.innerHTML = `<div class="sheet-top"><h2>Eintrag nicht gefunden</h2><button class="btn ghost" data-act="close">Schließen</button></div>`; return; }
+  const html = {motions:dMotion, journal:dJournal, args:dArg, sessions:dSession, assessments:dAssessment, notes:dNote, goals:dSimple, tasks:dSimple}[s.col](it, s.col);
+  swap(p, html);
+  if(first) p.scrollTop = 0;
+}
+function editorHtml(s){
+  const item = s.id ? (get(s.col, s.id) || {}) : (s.preset || {});
+  return `<form class="ed" id="edForm" data-col="${s.col}" novalidate>
+    <div class="sheet-top"><div><div class="eyebrow">${s.id?'Bearbeiten':'Neu'} · ${COL_NAME[s.col]}</div><h2>${s.id?esc(clip(itemTitle(s.col,item),80)):({motions:'Neue Motion',journal:'Debatte reflektieren',args:'Neuer Bibliothekseintrag',assessments:'Selbsteinschätzung',notes:'Neue Notiz'}[s.col])}</h2></div><button type="button" class="btn ghost" data-act="close">Abbrechen</button></div>
+    ${formHtml(s.col, item, s.preset)}
+    <datalist id="roles">${['Eröffnende Regierung (PM)','Eröffnende Regierung (DPM)','Eröffnende Opposition (LO)','Eröffnende Opposition (DLO)','Schließende Regierung (MG)','Schließende Regierung (GW)','Schließende Opposition (MO)','Schließende Opposition (OW)','OPD Regierung','OPD Opposition','OPD Freie Rede','Jury'].map(r=>`<option value="${r}">`).join('')}</datalist>
+    <div class="form-foot"><button type="button" class="btn ghost" data-act="close">Abbrechen</button><button type="submit" class="btn primary">Speichern</button></div>
+  </form>`;
+}
+function sec(title, body){ return body && String(body).trim() ? `<section class="sec"><h5>${esc(title)}</h5><div class="prose">${md(body)}</div></section>` : ''; }
+function notesHtml(col, it){
+  const ns = [...(it.notes||[])].reverse();
+  return `<section class="sec"><h5>Notizen & Nachträge</h5>
+    ${ns.length ? `<div class="notes-log">${ns.map(n=>`<div class="note"><div class="when">${fmtDate(dayOf(n.t))}</div><div class="prose">${md(n.text)}</div></div>`).join('')}</div>` : '<p class="missing">Ergänze jederzeit Gedanken, die dir später einfallen.</p>'}
+    <div class="add-note"><textarea id="noteIn_${it.id}" data-keep rows="2" placeholder="Nachtrag hinzufügen …" aria-label="Nachtrag"></textarea><button class="btn" data-act="addnote" data-col="${col}" data-id="${it.id}">Anfügen</button></div></section>`;
+}
+function linkedList(items){ return `<div class="linked">${items.map(([c,x,sub])=>`<button data-act="open" data-col="${c}" data-id="${x.id}"><span><span class="lt">${esc(clip(itemTitle(c,x),100))}</span>${sub?`<div class="ls">${esc(clip(sub,140))}</div>`:''}</span><span class="chip">${COL_NAME[c]}</span></button>`).join('')}</div>`; }
+function delBtn(col,id){ return `<button class="btn danger" data-act="del" data-col="${col}" data-id="${id}">Löschen</button>`; }
+function topBar(eyebrow, title, actions){ return `<div class="sheet-top"><div><div class="eyebrow">${eyebrow}</div><h2>${esc(title)}</h2></div><button class="btn ghost" data-act="close" aria-label="Schließen">Schließen</button></div><div class="sheet-actions">${actions}</div>`; }
+
+function dMotion(m){
+  const js = S.journal.filter(j=>j.motionId===m.id).sort(byDateDesc);
+  const as = (m.argIds||[]).map(id=>get('args',id)).filter(Boolean);
+  const ss = S.sessions.filter(s=>s.motionId===m.id).sort(byDateDesc);
+  const labels = {definition:'Definition & Kontext',pro:'Pro-Argumente',contra:'Contra-Argumente',line:'Eigene Argumentationslinie',rebuttals:'Gegenargumente & Rebuttals',insights:'Erkenntnisse',improve:'Nächstes Mal besser'};
+  const missing = Object.keys(labels).filter(k=>!String(m[k]||'').trim()).map(k=>labels[k]);
+  return topBar(`${esc(m.category||'Ohne Themengebiet')} · ${fmtDate(m.date)} · ${motionStatus(m)}`, m.title,
+    `<button class="btn primary" data-act="edit" data-col="motions" data-id="${m.id}">Bearbeiten</button><button class="btn" data-act="reflect" data-id="${m.id}">Debatte reflektieren</button><button class="btn" data-act="trainmotion" data-id="${m.id}">Im Trainer üben</button>${delBtn('motions',m.id)}`) +
+  `<div class="meta-line">${posChip(m.position)}${m.format?`<span class="chip">${esc(m.format)}</span>`:''}${m.role?`<span class="chip">${esc(m.role)}</span>`:''}${(m.tags||[]).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}${exChip(m)}</div>
+  ${Object.keys(labels).map(k=>sec(labels[k], m[k])).join('')}
+  ${missing.length ? `<p class="missing">Noch offen: ${missing.join(', ')}.</p>` : ''}
+  ${js.length ? `<section class="sec"><h5>Reflexionen zu dieser Motion</h5>${linkedList(js.map(j=>['journal',j,j.takeaway||j.wentWell||'']))}</section>` : ''}
+  ${as.length ? `<section class="sec"><h5>Verknüpfte Argumente</h5>${linkedList(as.map(a=>['args',a,a.claim||'']))}</section>` : ''}
+  ${ss.length ? `<section class="sec"><h5>Trainingseinheiten</h5>${linkedList(ss.map(s=>['sessions',s,s.feedback?.summary||fmtDate(s.date)]))}</section>` : ''}
+  ${notesHtml('motions', m)}`;
+}
+function ratingsView(r){
+  const v = SKILLS.filter(([k])=>+r?.[k]>0);
+  if(!v.length) return '';
+  return `<section class="sec"><h5>Kompetenzen</h5><div class="ratings-view">${v.map(([k,l])=>`<span>${l}</span><span class="rbar"><i style="width:${r[k]*10}%"></i></span><span class="mono">${r[k]}</span>`).join('')}</div></section>`;
+}
+function dJournal(e){
+  const m = e.motionId && get('motions', e.motionId);
+  const as = (e.argIds||[]).map(id=>get('args',id)).filter(Boolean);
+  return topBar(`Reflexion · ${fmtDate(e.date)}${e.result&&e.result!=='—'?' · '+esc(e.result):''}`, journalTitle(e),
+    `<button class="btn primary" data-act="edit" data-col="journal" data-id="${e.id}">Bearbeiten</button>${m?`<button class="btn" data-act="open" data-col="motions" data-id="${m.id}">Zur Motion</button>`:''}${delBtn('journal',e.id)}`) +
+  `<div class="meta-line">${posChip(e.position)}${e.role?`<span class="chip">${esc(e.role)}</span>`:''}${exChip(e)}</div>
+  ${sec('Was lief gut?', e.wentWell)}${sec('Wo hatte ich Schwierigkeiten?', e.struggles)}${sec('Welche Argumente haben funktioniert?', e.worked)}${sec('Wo wurde ich widerlegt?', e.refuted)}${sec('Struktur & Rhetorik', e.style)}${sec('Was nehme ich mit?', e.takeaway)}
+  ${(e.weaknesses||[]).length ? `<section class="sec"><h5>Beobachtete Schwächen</h5><div class="chips">${e.weaknesses.map(t=>`<span class="chip">${esc(t)}</span>`).join('')}</div></section>` : ''}
+  ${ratingsView(e.ratings)}
+  ${as.length ? `<section class="sec"><h5>Verwendete Argumente</h5>${linkedList(as.map(a=>['args',a,a.claim||'']))}</section>` : ''}
+  ${notesHtml('journal', e)}`;
+}
+function dArg(a){
+  const u = usedIn(a.id);
+  const src = a.source ? (/^https?:\/\//.test(a.source) ? `<a href="${esc(a.source)}" target="_blank" rel="noopener">${esc(a.source)}</a>` : esc(a.source)) : '';
+  return topBar(`${esc(a.type||'Argument')} · ${esc(a.category||'')}`, a.title,
+    `<button class="btn primary" data-act="edit" data-col="args" data-id="${a.id}">Bearbeiten</button><button class="btn" data-act="trainarg" data-id="${a.id}">Im Trainer prüfen</button>${delBtn('args',a.id)}`) +
+  `<div class="meta-line">${dots(a.strength)}${a.side?`<span class="chip">${esc(a.side)}</span>`:''}${(a.tags||[]).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}${exChip(a)}</div>
+  ${sec('These', a.claim)}${sec('Begründung / Mechanismus', a.reasoning)}${sec('Beleg, Beispiel oder Daten', a.evidence)}${sec('Impact & Weighing', a.impact)}
+  ${src ? `<section class="sec"><h5>Quelle</h5><div class="prose"><p>${src}</p></div></section>` : '<p class="missing">Keine Quelle angegeben.</p>'}
+  ${u.length ? `<section class="sec"><h5>Verwendet in</h5>${linkedList(u.map(([c,x])=>[c,x,fmtDate(x.date)]))}</section>` : '<p class="missing">Noch in keiner Motion oder Reflexion verwendet.</p>'}
+  ${notesHtml('args', a)}`;
+}
+function feedbackHtml(fb, withActions){
+  if(!fb) return '';
+  const list = (t,a)=> a && a.length ? `<div class="sec"><h5>${t}</h5><div class="prose"><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>` : '';
+  return `<div class="fb"><div class="panel-h"><h3>Feedback des Trainers</h3><span class="mono">Ø ${fmt1(ratingAvg(fb.scores))}</span></div>
+    ${fb.summary?`<p>${esc(fb.summary)}</p>`:''}
+    <div class="fb-grid">${list('Stärken',fb.strengths)}${list('Schwächen',fb.weaknesses)}${list('Fehlschlüsse',fb.fallacies)}${list('Übungen',fb.tasks)}</div>
+    ${ratingsView(fb.scores)}
+    ${withActions||''}</div>`;
+}
+function dSession(s){
+  return topBar(`Trainingseinheit · ${fmtDate(s.date)}`, itemTitle('sessions', s), `<button class="btn" data-act="resume" data-id="${s.id}">Im Trainer fortsetzen</button>${s.motionId&&get('motions',s.motionId)?`<button class="btn" data-act="open" data-col="motions" data-id="${s.motionId}">Zur Motion</button>`:''}${delBtn('sessions',s.id)}`) +
+  `<div class="meta-line">${s.side?posChip(s.side):''}${exChip(s)}</div>
+  ${feedbackHtml(s.feedback)}
+  <section class="sec"><h5>Verlauf</h5><div class="chat">${(s.turns||[]).filter(t=>!t.hidden).map(t=>msgHtml(t)).join('') || '<p class="missing">Kein Verlauf gespeichert.</p>'}</div></section>
+  ${notesHtml('sessions', s)}`;
+}
+function dAssessment(a){
+  return topBar(`Selbsteinschätzung`, fmtDate(a.date), `<button class="btn primary" data-act="edit" data-col="assessments" data-id="${a.id}">Bearbeiten</button>${delBtn('assessments',a.id)}`) +
+    `<div class="meta-line">${exChip(a)}</div>${ratingsView(a.ratings)}${sec('Kommentar', a.note)}`;
+}
+function dNote(n){
+  return topBar(`Notiz`, n.title||'Notiz', `<button class="btn primary" data-act="edit" data-col="notes" data-id="${n.id}">Bearbeiten</button>${delBtn('notes',n.id)}`) + sec('Inhalt', n.body);
+}
+function dSimple(x, col){ return topBar(COL_NAME[col], x.text, delBtn(col,x.id)); }
+
+/* =========================================================
+   KI-Trainer
+   ========================================================= */
+const T = {mode:'duel', motion:null, side:'Pro', turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, cat:'', note:''};
+const TM = {dur:420, left:420, run:false, iv:null, last:0};
+let sampleFn; let sampleState = 'unknown';
+async function getSample(){
+  if(sampleFn !== undefined) return sampleFn;
+  try{ sampleFn = (window.claude && typeof window.claude.use==='function') ? await window.claude.use('sample') : null; }catch(e){ sampleFn = null; }
+  sampleState = sampleFn ? 'ok' : 'none';
+  return sampleFn;
+}
+const ERR = {not_granted:'Du hast dem Trainer den Zugriff auf Claude nicht erlaubt. Öffne die Berechtigungen der Seite, um ihn zu aktivieren.', sampling_disabled:'Claude ist für dieses Konto hier nicht verfügbar.', rate_limited:'Gerade zu viele Anfragen. Versuche es in einer Minute erneut.', session_expired:'Bitte melde dich erneut an.', refused:'Claude hat diese Anfrage abgelehnt. Formuliere sie anders.', empty_completion:'Keine Antwort erhalten. Versuche es mit weniger Text.', prompt_too_large:'Der Verlauf ist zu lang. Starte eine neue Einheit.', invalid_json:'Die Bewertung kam unvollständig an. Bitte erneut anfordern.'};
+const errMsg = e => ERR[e && e.code] || 'Verbindung unterbrochen. Bitte erneut versuchen.';
+const isGone = e => ['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e && e.code);
+
+function opp(){ return T.side==='Pro' ? 'Contra' : 'Pro'; }
+function weakContext(){
+  const w = weaknessReport();
+  const items = [...w.tags.slice(0,3).map(x=>x.t), ...w.low.map(s=>s.label+' (Ø '+fmt1(s.recent)+')')];
+  return items.length ? 'Meine bekannten Schwächen aus früheren Debatten: '+items.join('; ')+'. Achte besonders darauf und sprich sie an, wenn sie wieder auftreten.' : '';
+}
+function rulesText(){
+  const m = T.motion;
+  const modeRules = {
+    duel:`Modus: Debatte gegen mich. Du vertrittst konsequent die Gegenseite (${opp()}). Halte echte, starke Reden mit zwei bis drei Argumenten (These, Mechanismus, Impact) und widerlege meine Punkte direkt und konkret. Gib in diesem Modus KEIN Coaching-Feedback, sondern debattiere. Beende jede Rede mit einer scharfen Zwischenfrage an mich. Reden etwa 300–400 Wörter.`,
+    prep:`Modus: Vorbereitungs-Check. Ich habe 15 Minuten vorbereitet und schicke dir meinen Case für die Seite ${T.side}. Prüfe wie ein strenger Juror: Wo fehlen Mechanismen? Welche Gegenargumente habe ich übersehen? Welcher Clash entscheidet die Debatte? Was würde die Gegenseite zuerst angreifen? Stelle danach zwei bohrende Nachfragen.`,
+    rebuttal:`Modus: Rebuttal-Drill. Präsentiere jeweils EIN starkes Argument der Gegenseite (${opp()}) mit Mechanismus und Beispiel (max. 120 Wörter). Ich widerlege. Bewerte meinen Rebuttal knapp: Welche Ebene habe ich angegriffen (nicht wahr / nicht kausal / nicht wichtig / nicht exklusiv / Turn)? Was hätte stärker gewirkt? Note 1–10. Bring dann sofort das nächste, schwierigere Argument.`,
+    poi:`Modus: POI-Drill. Stelle mir jeweils EINE kurze, scharfe Zwischenfrage (max. 25 Wörter) gegen meine Seite (${T.side}). Ich antworte in ein bis zwei Sätzen. Bewerte jede Antwort in einer Zeile (Treffsicherheit, Ruhe, Rückführung auf mein Argument, Note 1–10) und stelle sofort die nächste, schwierigere Frage.`,
+    check:`Modus: Argument-Check. Ich schicke dir ein einzelnes Argument. Analysiere: 1) Struktur (These, Mechanismus, Impact vorhanden?), 2) logische Lücken und Fehlschlüsse mit Namen, 3) den stärksten Angriff der Gegenseite, 4) wie ich das Argument härter mache, 5) Note 1–10. Sei streng.`,
+    switch:`Modus: Seitenwechsel. Ich skizziere zuerst die stärkste Pro-Rede, danach die stärkste Contra-Rede. Nach der ersten Skizze: kurze Kritik und Aufforderung zur Gegenseite. Nach beiden: Welche Seite war stärker und warum? Wo habe ich Strohmänner gegen meine eigene Position gebaut? Welche Argumente fehlten auf der schwächeren Seite?`
+  }[T.mode];
+  return `Du bist mein persönlicher Debattiertrainer und Juror (Formate BPS und OPD, Debattierklub Wien). Antworte auf Deutsch.
+Grundhaltung: kritisch, anspruchsvoll und fair. Stimme mir nicht zu, nur weil ich etwas behaupte. Benenne konkret unbelegte Behauptungen, fehlende Mechanismen, fehlende Impacts, logische Fehlschlüsse (mit Namen), fehlendes Weighing und übersehene Gegenargumente. Lob nur, wenn es verdient ist, und dann präzise.
+Halte Antworten kompakt (höchstens etwa 250 Wörter, außer du hältst eine Rede). Kurze Absätze, Aufzählungen mit "- ", Hervorhebungen mit **fett**. Keine Floskeln.
+${modeRules}
+${m ? `Motion: "${m.title}"${m.context?'\nKontext/Info-Slide: '+m.context:''}` : 'Keine bestimmte Motion vorgegeben.'}
+${T.mode==='check' ? '' : 'Meine Seite: '+T.side+'.'}
+${weakContext()}`;
+}
+function kickoff(){
+  return {duel: T.side==='Contra' ? 'Eröffne die Debatte mit deiner Rede für Pro.' : null, rebuttal:'Bring das erste Argument.', poi:'Erste Zwischenfrage bitte.'}[T.mode] || null;
+}
+function sysNote(){
+  return {duel: T.side==='Pro' ? 'Du eröffnest. Schreib deine Rede (oder deine Stichpunkte) und schick sie ab.' : 'Die KI eröffnet für Pro.', prep:'Starte den 15-Minuten-Timer, bereite deinen Case vor und schick ihn dann ab.', check:'Füge dein Argument ein und schick es ab.', switch:'Schreib zuerst deine stärkste Pro-Skizze.', rebuttal:'', poi:''}[T.mode];
+}
+function msgHtml(t, streaming){
+  if(t.role==='sys') return `<div class="msg sys">${esc(t.content)}</div>`;
+  if(t.role==='user') return `<div class="msg user"><div class="who">Du</div>${esc(t.content)}</div>`;
+  return `<div class="msg ai"${streaming?' id="streamMsg"':''}><div class="who">Trainer</div><div class="prose">${t.content ? md(t.content) : '<p class="muted">Denkt nach …</p>'}</div></div>`;
+}
+function vTrainer(){
+  const m = T.motion, started = T.turns.length>0;
+  const archive = [...S.motions].sort(byDateDesc);
+  const recentS = [...S.sessions].sort(byDateDesc).slice(0,5);
+  const sample = sampleState;
+  return `
+  <header class="head"><div><div class="eyebrow">Modul D</div><h2>KI-Debattiertrainer</h2><p>Ein kritischer Sparringspartner, der deine Schwächen kennt. Er stimmt dir nicht einfach zu.</p></div>
+    <div class="actions">${started?`<button class="btn" data-act="tnew">Neue Einheit</button>`:''}</div></header>
+  ${sample==='none' ? `<div class="banner"><span>Der KI-Trainer braucht die Claude-Anbindung dieser Seite. Sie ist in dieser Ansicht nicht verfügbar. Motion-Auswahl und Timer funktionieren trotzdem.</span></div>` : ''}
+  <div class="trainer">
+    <div class="col">
+      <section class="panel">
+        <div class="panel-h"><h3>Übungsform</h3></div>
+        <div class="modes">${Object.entries(MODES).map(([k,v])=>`<button class="mode ${T.mode===k?'on':''}" data-act="tmode" data-m="${k}" ${started?'disabled title="Starte eine neue Einheit, um die Übungsform zu wechseln"':''}>${v.name}</button>`).join('')}</div>
+        <p class="muted" style="font-size:13px">${MODES[T.mode].desc}</p>
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h3>Motion</h3>${m&&!m.motionId?`<button class="mini" data-act="tarchive">ins Archiv</button>`:''}</div>
+        ${m ? `<div class="motion-card"><span class="eyebrow">${esc(m.category||'')} · ${esc(m.src||'')}</span><span class="mt">${esc(m.title)}</span>${m.context?`<span class="muted" style="font-size:13px">${esc(m.context)}</span>`:''}</div>` : `<p class="empty">${T.mode==='check'?'Optional für den Argument-Check.':'Wähle eine Motion.'}</p>`}
+        <div class="inline-add"><select id="tCat" aria-label="Themengebiet"><option value="">Alle Themen</option>${CATS.map(c=>`<option ${T.cat===c?'selected':''}>${c}</option>`).join('')}</select><button class="btn" data-act="trandom" ${started?'disabled':''}>Zufällige Übungsmotion</button></div>
+        <div class="inline-add"><button class="btn ghost" data-act="tgen" ${started||sample==='none'?'disabled':''}>Neue Motion von der KI</button></div>
+        ${archive.length ? `<div class="inline-add"><select id="tArch" aria-label="Aus dem Archiv" ${started?'disabled':''}><option value="">Aus meinem Archiv …</option>${archive.map(x=>`<option value="${x.id}">${esc(clip(x.title,70))}</option>`).join('')}</select></div>` : ''}
+        <div class="inline-add"><input type="text" id="tOwn" data-keep placeholder="Eigene Motion eingeben" aria-label="Eigene Motion" ${started?'disabled':''}><button class="btn" data-act="town" ${started?'disabled':''}>Übernehmen</button></div>
+      </section>
+      ${T.mode!=='check' ? `<section class="panel"><div class="panel-h"><h3>Deine Seite</h3></div>
+        <div class="seg" role="group" aria-label="Seite">${['Pro','Contra'].map(s=>`<button data-act="tside" data-s="${s}" class="${T.side===s?'on':''}" ${started?'disabled':''}>${s}</button>`).join('')}<button data-act="tside" data-s="rand" ${started?'disabled':''}>Zufall</button></div></section>` : ''}
+      <section class="panel timer">
+        <div class="panel-h"><h3>Redezeit</h3><span class="eyebrow" id="tmLabel">${TM.dur===420?'BPS-Rede':TM.dur===900?'Vorbereitung':TM.dur===210?'Freie Rede (OPD)':'Timer'}</span></div>
+        <div class="clock" id="clock">${clockText()}</div>
+        <div class="tbar"><i id="tbar" style="width:${(1-TM.left/TM.dur)*100}%"></i></div>
+        <div class="clock-sub" id="clockSub">${clockSub()}</div>
+        <div class="toolbar" style="justify-content:center"><button class="btn primary" data-act="tmgo" id="tmGo">${TM.run?'Pause':'Start'}</button><button class="btn" data-act="tmreset">Zurücksetzen</button></div>
+        <div class="chips" style="justify-content:center">${[[420,'7:00'],[900,'15:00'],[210,'3:30'],[60,'1:00']].map(([s,l])=>`<button class="chip ${TM.dur===s?'on':''}" data-act="tmset" data-s="${s}">${l}</button>`).join('')}</div>
+      </section>
+    </div>
+    <div class="col">
+      <section class="panel">
+        <div class="panel-h"><h3>${esc(MODES[T.mode].name)}</h3><span class="toolbar">${T.mode!=='check'&&m?posChip(T.side):''}</span></div>
+        <div class="chat" id="chat">
+          ${!started ? `<div class="msg sys">${esc(MODES[T.mode].needsMotion&&!m ? 'Wähle links eine Motion und starte dann.' : 'Bereit. '+(sysNote()||''))}</div>` : ''}
+          ${T.turns.filter(t=>!t.hidden).map(t=>msgHtml(t)).join('')}
+          ${T.busy ? msgHtml({role:'assistant',content:T.stream||''}, true) : ''}
+          ${T.note ? `<div class="msg sys">${esc(T.note)}</div>` : ''}
+        </div>
+        ${!started && kickoff() && (m||!MODES[T.mode].needsMotion) ? `<div class="toolbar"><button class="btn primary" data-act="tstart" ${sample==='none'?'disabled':''}>Einheit starten</button></div>` : ''}
+        <div class="composer">
+          <textarea id="tInput" data-keep placeholder="${T.mode==='duel'?'Deine Rede oder Erwiderung …':T.mode==='check'?'Dein Argument …':T.mode==='poi'?'Deine Antwort in ein bis zwei Sätzen …':'Deine Antwort …'}" aria-label="Deine Eingabe" ${(MODES[T.mode].needsMotion&&!m)?'disabled':''}></textarea>
+          <div class="row-b">
+            <span class="faint" style="font-size:12px" id="wc"></span>
+            <span class="toolbar">${T.busy?`<button class="btn" data-act="tstop">Stopp</button>`:''}<button class="btn primary" data-act="tsend" ${T.busy||sample==='none'||(MODES[T.mode].needsMotion&&!m)?'disabled':''}>Senden</button></span>
+          </div>
+        </div>
+        ${started ? `<div class="toolbar"><button class="btn" data-act="tfeedback" ${T.busy||T.fbBusy||sample==='none'?'disabled':''}>${T.fbBusy?'Bewertung läuft …':'Feedback & Bewertung'}</button><button class="btn" data-act="tsave" ${T.busy?'disabled':''}>${T.sessionId?'Einheit aktualisieren':'Einheit speichern'}</button></div>` : ''}
+        ${T.feedback ? feedbackHtml(T.feedback, `<div class="toolbar">${T.feedback.tasks&&T.feedback.tasks.length?`<button class="btn" data-act="ttasks">Übungen als Aufgaben übernehmen</button>`:''}<span class="faint" style="font-size:12px">Beim Speichern fließt die Bewertung in deinen Fortschritt ein.</span></div>`) : ''}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h3>Letzte Einheiten</h3></div>
+        ${recentS.length ? `<div class="rows">${recentS.map(s=>`<button class="row" data-act="open" data-col="sessions" data-id="${s.id}"><span class="d">${fmtShort(s.date)}</span><span class="t">${esc(clip(itemTitle('sessions',s),90))}</span><span class="m">${s.feedback?`<span class="chip">Ø ${fmt1(ratingAvg(s.feedback.scores))}</span>`:''}${exChip(s)}</span></button>`).join('')}</div>` : '<p class="empty">Gespeicherte Einheiten erscheinen hier und fließen in deinen Fortschritt ein.</p>'}
+      </section>
+    </div>
+  </div>`;
+}
+function afterTrainerRender(){ const c = $('#chat'); if(c && (T.busy || T.justSent)){ c.lastElementChild && c.lastElementChild.scrollIntoView({block:'nearest'}); T.justSent = false; } updateWc(); }
+function updateWc(){ const i = $('#tInput'), w = $('#wc'); if(i && w){ const n = i.value.trim() ? i.value.trim().split(/\s+/).length : 0; w.textContent = n ? n+' Wörter · ca. '+Math.max(1,Math.round(n/130))+' Min. gesprochen' : ''; } }
+function setMotion(mo){ T.motion = mo; T.note = ''; render(); }
+function resetTrainer(){ if(T.ctl) T.ctl.abort(); Object.assign(T, {turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, stream:'', note:''}); render(); }
+
+async function callTrainer(){
+  const sample = await getSample();
+  if(!sample){ T.note = 'Der KI-Trainer ist in dieser Ansicht nicht verfügbar.'; render(); return; }
+  T.busy = true; T.stream = ''; T.note = ''; T.ctl = new AbortController();
+  render();
+  const turns = T.turns.filter(t=>t.role!=='sys').slice(-24).map(t=>({role:t.role, content:t.content}));
+  while(turns.length && turns[0].role!=='user') turns.shift();
+  const input = [{role:'user', content:rulesText()}, ...turns];
+  try{
+    const res = await sample(input, {cache:false, signal:T.ctl.signal, onText:({text})=>{ T.stream = text; const el = document.querySelector('#streamMsg .prose'); if(el){ el.innerHTML = md(text); } }});
+    T.turns.push({role:'assistant', content:res.text});
+    if(res.truncated) T.note = 'Antwort wurde gekürzt.';
+  }catch(e){
+    if(e && e.text && e.code!=='refused') T.turns.push({role:'assistant', content:e.text});
+    if(!(e && e.code==='cancelled')) T.note = errMsg(e);
+    if(isGone(e)) sampleState = 'none';
+  }
+  T.busy = false; T.ctl = null; T.stream = ''; T.justSent = true;
+  render();
+}
+async function trainerSend(){
+  const i = $('#tInput'); if(!i) return;
+  const text = i.value.trim(); if(!text || T.busy) return;
+  if(MODES[T.mode].needsMotion && !T.motion){ toast('Bitte zuerst eine Motion wählen.'); return; }
+  if(!T.turns.length){ const k = kickoff(); if(k && T.mode!=='duel') T.turns.push({role:'user', content:k, hidden:true}); }
+  T.turns.push({role:'user', content:text});
+  i.value = '';
+  T.justSent = true;
+  await callTrainer();
+}
+async function trainerStart(){
+  const k = kickoff(); if(!k) return;
+  T.turns.push({role:'user', content:k, hidden:true});
+  await callTrainer();
+}
+async function trainerFeedback(){
+  const sample = await getSample(); if(!sample) return;
+  const transcript = T.turns.filter(t=>!t.hidden && t.role!=='sys').map(t=>(t.role==='user'?'ICH: ':'TRAINER/GEGNER: ')+t.content).join('\n\n').slice(-60000);
+  if(!T.turns.some(t=>t.role==='user' && !t.hidden)){ toast('Schreib zuerst einen eigenen Beitrag.'); return; }
+  T.fbBusy = true; render();
+  const keys = SKILLS.map(s=>s[0]);
+  const prompt = `Du bist ein strenger Debatten-Juror. Bewerte ausschließlich MEINE Beiträge (mit "ICH:" markiert) in diesem Trainingsverlauf.
+Übungsform: ${MODES[T.mode].name}. ${T.motion?'Motion: "'+T.motion.title+'". ':''}${T.mode!=='check'?'Meine Seite: '+T.side+'.':''}
+${weakContext()}
+
+VERLAUF:
+${transcript}
+
+Antworte NUR mit einem JSON-Objekt in genau dieser Form:
+{"summary":"2-3 Sätze Gesamturteil","strengths":["…"],"weaknesses":["…"],"fallacies":["Name des Fehlschlusses: wo genau"],"scores":{${keys.map(k=>`"${k}":0`).join(',')}},"tasks":["konkrete Übung für die nächste Woche"]}
+Scores von 1 bis 10; 0 für Kompetenzen, die in diesem Verlauf nicht beurteilbar sind. Maßstab: 5 = Anfänger, 7 = solide Clubleistung, 9+ nur für Turnierniveau. Sei kritisch und konkret, höchstens je 4 Punkte pro Liste, Deutsch.`;
+  try{
+    const fb = await sample.json(prompt, {cache:false});
+    const sc = {}; keys.forEach(k=>{ const v = Math.round(+((fb&&fb.scores)||{})[k]||0); sc[k] = Math.max(0, Math.min(10, v)); });
+    const arr = a => Array.isArray(a) ? a.map(String).filter(Boolean).slice(0,6) : [];
+    T.feedback = {summary:String(fb&&fb.summary||''), strengths:arr(fb&&fb.strengths), weaknesses:arr(fb&&fb.weaknesses), fallacies:arr(fb&&fb.fallacies), tasks:arr(fb&&fb.tasks), scores:sc};
+  }catch(e){ T.note = errMsg(e); if(isGone(e)) sampleState = 'none'; }
+  T.fbBusy = false; render();
+}
+async function trainerSave(){
+  const prev = T.sessionId && get('sessions', T.sessionId);
+  let turns = T.turns.filter(t=>t.role!=='sys');
+  let total = 0; const kept = [];
+  for(let i=turns.length-1;i>=0;i--){ total += turns[i].content.length; if(total>150000) break; kept.unshift(turns[i]); }
+  const it = await save('sessions', Object.assign({}, prev||{}, {id:T.sessionId||undefined, date:prev?prev.date:today(), mode:T.mode, motion:T.motion?T.motion.title:'', motionId:T.motion&&T.motion.motionId||'', category:T.motion&&T.motion.category||'', side:T.mode==='check'?'':T.side, turns:kept, feedback:T.feedback||null}));
+  T.sessionId = it.id; toast('Einheit gespeichert.'); render();
+}
+
+/* Timer */
+function clockText(){ const s = Math.abs(TM.left); return (TM.left<0?'+':'')+Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
+function clockSub(){
+  if(TM.left<=0) return 'Zeit ist um – Schlusssatz!';
+  const el = TM.dur-TM.left;
+  if(TM.dur===420){ if(el<60) return 'Geschützte Zeit · keine Zwischenfragen'; if(TM.left<=60) return 'Geschützte Zeit · Weighing & Schluss'; return 'Zwischenfragen erlaubt'; }
+  if(TM.dur===900){ if(el<180) return 'Ideen sammeln'; if(el<480) return 'Clash & Linie festlegen'; if(el<780) return 'Argumente ausformulieren'; return 'Gegenargumente notieren'; }
+  return '';
+}
+function tick(){
+  const now = Date.now(); TM.left -= (now-TM.last)/1000; TM.last = now;
+  const c = $('#clock'); if(c){ c.textContent = clockText(); c.className = 'clock'+(TM.left<=0?' over':TM.left<=30?' warn':''); }
+  const b = $('#tbar'); if(b) b.style.width = Math.min(100,(1-Math.max(0,TM.left)/TM.dur)*100)+'%';
+  const s = $('#clockSub'); if(s) s.textContent = clockSub();
+}
+function tmToggle(){
+  TM.run = !TM.run;
+  if(TM.run){ TM.last = Date.now(); TM.iv = setInterval(tick, 250); } else { clearInterval(TM.iv); tick(); }
+  const g = $('#tmGo'); if(g) g.textContent = TM.run?'Pause':'Start';
+}
+function tmSet(s){ clearInterval(TM.iv); TM.run = false; TM.dur = s; TM.left = s; render(); }
+
+/* =========================================================
+   KI-Helfer für Dashboard & Fortschritt
+   ========================================================= */
+async function suggestTasks(){
+  const sample = await getSample();
+  if(!sample){ ui.suggestions = {error:'Die KI ist in dieser Ansicht nicht verfügbar.'}; render(); return; }
+  ui.suggestions = {loading:true}; render();
+  const recent = [...S.journal].sort(byDateDesc).slice(0,6).map(e=>`- ${fmtDate(e.date)} | ${journalTitle(e)} | Schwierigkeiten: ${clip(e.struggles,200)} | Widerlegt: ${clip(e.refuted,200)} | Mitnehmen: ${clip(e.takeaway,200)} | Schwächen: ${(e.weaknesses||[]).join(', ')}`).join('\n');
+  const stats = skillStats().map(s=>`${s.k} (${s.label}): Ø ${fmt1(s.recent)}`).join('; ');
+  const open = S.tasks.filter(t=>!t.done).map(t=>t.text).join('; ');
+  try{
+    const r = await sample.json(`Du bist Debattiertrainer. Schlage mir genau 3 konkrete, in 15–45 Minuten machbare Trainingsaufgaben für diese Woche vor, die gezielt an meinen Schwächen ansetzen. Keine Wiederholung bereits offener Aufgaben.
+Letzte Reflexionen:
+${recent || '(noch keine)'}
+Kompetenzen (letzte 5 Bewertungen): ${stats}
+Offene Aufgaben: ${open || 'keine'}
+Antworte NUR mit JSON: [{"text":"Aufgabe als Imperativ, max. 15 Wörter","why":"ein Satz Begründung","skill":"einer von ${SKILLS.map(s=>s[0]).join('|')}"}]`, {modelTier:'quick', cache:false});
+    ui.suggestions = {items:(Array.isArray(r)?r:[]).filter(x=>x&&x.text).slice(0,3).map(x=>({text:String(x.text), why:String(x.why||''), skill:String(x.skill||'')}))};
+    if(!ui.suggestions.items.length) ui.suggestions = {error:'Keine Vorschläge erhalten. Bitte erneut versuchen.'};
+  }catch(e){ ui.suggestions = {error:errMsg(e)}; }
+  render();
+}
+async function analyzePatterns(){
+  const sample = await getSample();
+  if(!sample){ ui.analysis = {error:'Die KI ist in dieser Ansicht nicht verfügbar.'}; render(); return; }
+  if(!S.journal.length){ toast('Erst ein paar Reflexionen erfassen.'); return; }
+  ui.analysis = {loading:true}; render();
+  const data = [...S.journal].sort(byDateDesc).slice(0,12).map(e=>`### ${fmtDate(e.date)} – ${journalTitle(e)} (${e.position||''}, ${e.role||''}, ${e.result||''})
+Gut: ${clip(e.wentWell,300)}
+Schwierigkeiten: ${clip(e.struggles,300)}
+Widerlegt: ${clip(e.refuted,300)}
+Struktur/Rhetorik: ${clip(e.style,300)}
+Mitnehmen: ${clip(e.takeaway,200)}
+Schwächen: ${(e.weaknesses||[]).join(', ')}
+Bewertung: ${SKILLS.filter(([k])=>e.ratings&&e.ratings[k]>0).map(([k,l])=>l+' '+e.ratings[k]).join(', ')}`).join('\n\n');
+  try{
+    const r = await sample(`Du bist ein erfahrener Debattiertrainer. Analysiere meine letzten Debattenreflexionen kritisch und ehrlich.
+Gib zurück:
+### Wiederkehrende Muster
+(3–4 Punkte, mit Bezug auf konkrete Debatten)
+### Was sich verbessert hat
+### Wichtigster Hebel für die nächsten vier Wochen
+(ein Fokus mit Begründung)
+### Konkreter Trainingsplan
+(3 Übungen)
+Deutsch, kompakt, keine Floskeln.
+
+${data}`, {cache:false});
+    ui.analysis = {text:r.text};
+  }catch(e){ ui.analysis = {error:errMsg(e)}; }
+  render();
+}
+async function generateMotion(){
+  const sample = await getSample(); if(!sample){ toast('Die KI ist hier nicht verfügbar.'); return; }
+  T.note = 'Die KI formuliert eine Motion …'; render();
+  try{
+    const cat = T.cat || CATS[Math.floor(Math.random()*CATS.length)];
+    const r = await sample.json(`Formuliere eine anspruchsvolle, ausgewogene Debatten-Motion im Stil des Debattierklubs Wien (beginnt mit "DH" für "Dieses Haus") zum Themengebiet "${cat}". Beide Seiten müssen gut vertretbar sein. Vermeide diese bereits bekannten Motions: ${S.motions.slice(0,20).map(m=>m.title).join('; ')}.
+Antworte NUR mit JSON: {"title":"DH …","context":"Info-Slide in 1-2 Sätzen, nur falls nötig, sonst leer"}`, {modelTier:'quick', cache:false});
+    if(r && r.title) setMotion({title:String(r.title), context:String(r.context||''), category:cat, src:'KI-generiert'});
+    else { T.note = 'Keine Motion erhalten.'; render(); }
+  }catch(e){ T.note = errMsg(e); render(); }
+}
+
+/* =========================================================
+   Export / Import
+   ========================================================= */
+async function doExport(){
+  const payload = JSON.stringify({app:'personal-debate-hub', version:1, exported:new Date().toISOString(), data:S}, null, 2);
+  let dl = null;
+  try{ dl = window.claude && await window.claude.use('downloads'); }catch(e){}
+  if(dl){
+    try{ await dl.save({filename:'debate-hub-'+today()+'.json', data:payload}); toast('Sicherung erstellt.'); return; }catch(e){ if(e && e.code==='declined') return; }
+  }
+  openSheet({kind:'raw', html:`<div class="sheet-top"><div><div class="eyebrow">Sicherung</div><h2>Daten als JSON</h2></div><button class="btn ghost" data-act="close">Schließen</button></div><p class="muted">Kopiere den Inhalt und speichere ihn als .json-Datei. Über „Importieren“ lässt er sich wiederherstellen.</p><div class="fld"><textarea id="exportBox" rows="18" readonly>${esc(payload)}</textarea></div><div><button class="btn primary" data-act="copyexport">In die Zwischenablage</button></div>`});
+}
+function handleImport(file){
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try{ d = JSON.parse(r.result); d = d.data || d; }catch(e){ toast('Die Datei ist kein gültiges JSON.'); return; }
+    const counts = COLS.map(c=>[c, Array.isArray(d[c]) ? d[c].filter(x=>x && typeof x==='object').length : 0]).filter(x=>x[1]);
+    if(!counts.length){ toast('Keine passenden Einträge in der Datei gefunden.'); return; }
+    ui.pendingImport = d;
+    openSheet({kind:'raw', html:`<div class="sheet-top"><div><div class="eyebrow">Import</div><h2>Sicherung einspielen</h2></div><button class="btn ghost" data-act="close">Abbrechen</button></div>
+      <div class="prose"><p>Gefunden:</p><ul>${counts.map(([c,n])=>`<li>${n} × ${COL_NAME[c]}</li>`).join('')}</ul><p>Einträge mit gleicher ID werden überschrieben, alle anderen bleiben erhalten.</p></div>
+      <div><button class="btn primary" data-act="doimport">Importieren</button></div>`});
+  };
+  r.readAsText(file);
+}
+async function doImport(){
+  const d = ui.pendingImport; if(!d) return;
+  let n = 0;
+  for(const c of COLS){ if(!Array.isArray(d[c])) continue; for(const x of d[c]){ if(x && typeof x==='object'){ await save(c, Object.assign({}, x, {id: (typeof x.id==='string' && /^[A-Za-z0-9_\-.~:@+]{1,120}$/.test(x.id)) ? x.id : undefined})); n++; } } }
+  ui.pendingImport = null; closeSheet(); toast(n+' Einträge importiert.');
+}
+
+/* =========================================================
+   Events
+   ========================================================= */
+function go(r){ ui.route = r; if(location.hash !== '#'+r) history.replaceState(null,'','#'+r); render(); window.scrollTo(0,0); }
+window.addEventListener('hashchange', ()=>{ const r = parseHash(); if(r!==ui.route){ ui.route = r; render(); window.scrollTo(0,0); } });
+
+document.addEventListener('click', async ev => {
+  const el = ev.target.closest('[data-act]'); if(!el) return;
+  const a = el.dataset.act, col = el.dataset.col, id = el.dataset.id;
+  if(el.tagName==='INPUT' && el.type==='checkbox' && a!=='toggle') return;
+  switch(a){
+    case 'go': if(ui.sheet) closeSheet(); go(el.dataset.r); break;
+    case 'new': openSheet({kind:'edit', col, id:null, preset: col==='journal'||col==='assessments' ? {date:today()} : col==='motions' ? {date:today(), position:'Pro', format:'BPS'} : col==='args' ? {strength:3} : {}}); break;
+    case 'edit': openSheet({kind:'edit', col, id}); break;
+    case 'open': openSheet({kind:'detail', col, id}); break;
+    case 'close': closeSheet(); break;
+    case 'bgclose': if(ui.sheet && ui.sheet.kind!=='edit') closeSheet(); break;
+    case 'del':
+      if(!el.dataset.armed){ el.dataset.armed = '1'; el.textContent = 'Wirklich löschen?'; setTimeout(()=>{ if(el.isConnected){ delete el.dataset.armed; el.textContent = 'Löschen'; } }, 4000); }
+      else { await remove(col, id); closeSheet(); toast(COL_NAME[col]+' gelöscht.'); }
+      break;
+    case 'delq': remove(col, id); break;
+    case 'toggle': { const it = get(col,id); if(it) save(col, Object.assign({}, it, {done: el.checked})); break; }
+    case 'addgoal': { const i = $('#goalIn'); const t = i.value.trim(); if(!t) { i.focus(); break; } i.value = ''; save('goals', {text:t, skill:$('#goalSkill').value, done:false}); break; }
+    case 'addtask': { const i = $('#taskIn'); const t = i.value.trim(); if(!t) { i.focus(); break; } i.value = ''; save('tasks', {text:t, due:$('#taskDue').value, done:false, source:'manuell'}); break; }
+    case 'qnote': { const i = $('#qnote'); const t = i.value.trim(); if(!t) break; i.value = ''; save('notes', {section:'inbox', title:clip(t,50), body:t}); toast('Notiz abgelegt.'); break; }
+    case 'suggest': suggestTasks(); break;
+    case 'takesug': { const s = ui.suggestions.items[+el.dataset.i]; if(s){ save('tasks', {text:s.text, done:false, source:'KI-Vorschlag', skill:s.skill}); ui.suggestions.items.splice(+el.dataset.i,1); if(!ui.suggestions.items.length) ui.suggestions = null; render(); } break; }
+    case 'clearex': {
+      if(!el.dataset.armed){ el.dataset.armed='1'; el.textContent='Alle Beispiele wirklich löschen?'; setTimeout(()=>{ if(el.isConnected){ delete el.dataset.armed; el.textContent='Beispieldaten entfernen'; } },4000); break; }
+      for(const c of COLS) for(const x of S[c].filter(x=>x.example)) await remove(c, x.id);
+      toast('Beispieldaten entfernt.'); break;
+    }
+    case 'setf': { const [o,k] = el.dataset.f.split('.'); ui[o][k] = el.dataset.v; render(); break; }
+    case 'addnote': {
+      const i = document.getElementById('noteIn_'+id); const t = i && i.value.trim(); if(!t) break;
+      const it = get(col,id); if(!it) break; i.value = '';
+      await save(col, Object.assign({}, it, {notes:[...(it.notes||[]), {t:new Date().toISOString(), text:t}]}));
+      toast('Nachtrag gespeichert.'); break;
+    }
+    case 'reflect': openSheet({kind:'edit', col:'journal', id:null, preset:{motionId:id, date:get('motions',id)?.date||today(), position:get('motions',id)?.position==='Contra'?'Contra':'Pro', role:get('motions',id)?.role||''}}); break;
+    case 'trainmotion': { const m = get('motions',id); if(!m) break; closeSheet(); resetTrainer(); T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; go('trainer'); break; }
+    case 'trainarg': { const ar = get('args',id); if(!ar) break; closeSheet(); resetTrainer(); T.mode = 'check'; go('trainer'); setTimeout(()=>{ const i = $('#tInput'); if(i){ i.value = [ar.title, ar.claim&&'These: '+ar.claim, ar.reasoning&&'Mechanismus: '+ar.reasoning, ar.evidence&&'Beleg: '+ar.evidence, ar.impact&&'Impact: '+ar.impact].filter(Boolean).join('\n'); updateWc(); i.focus(); } }, 50); break; }
+    case 'resume': { const s = get('sessions',id); if(!s) break; closeSheet(); if(T.ctl) T.ctl.abort(); Object.assign(T, {mode:s.mode||'duel', side:s.side||'Pro', motion:s.motion?{title:s.motion, category:s.category||'', src:'Fortgesetzt', motionId:s.motionId||''}:null, turns:(s.turns||[]).slice(), feedback:s.feedback||null, sessionId:s.id, busy:false, note:''}); go('trainer'); break; }
+    case 'toggleskill': { const k = el.dataset.k; ui.pf.on.has(k) ? ui.pf.on.delete(k) : ui.pf.on.add(k); render(); break; }
+    case 'analyze': analyzePatterns(); break;
+    case 'closeanalysis': ui.analysis = null; render(); break;
+    case 'kbsec': ui.kb.sec = el.dataset.sec; ui.kb.q = ''; render(); break;
+    case 'kbadd': { const b = $('#kbBody'), t = $('#kbTitle'); const body = b.value.trim(); if(!body){ b.focus(); break; } const title = t.value.trim(); b.value = ''; t.value = ''; save('notes', {section:el.dataset.sec, title:title||clip(body,50), body}); toast('Ergänzung gespeichert.'); break; }
+    case 'export': doExport(); break;
+    case 'import': $('#importFile').click(); break;
+    case 'doimport': doImport(); break;
+    case 'copyexport': { const b = $('#exportBox'); try{ await navigator.clipboard.writeText(b.value); toast('Kopiert.'); }catch(e){ b.focus(); b.select(); toast('Text markiert – jetzt kopieren.'); } break; }
+    // Editor helpers
+    case 'tagtoggle': el.classList.toggle('on'); break;
+    case 'libpick': {
+      const p = document.getElementById('pick_'+el.dataset.k); if(!p) break;
+      if(!p.hidden){ p.hidden = true; break; }
+      const args = [...S.args].sort(byUpdated);
+      p.innerHTML = args.length ? `<input type="search" class="pick-q" placeholder="Bibliothek filtern …" aria-label="Bibliothek filtern">${args.map(x=>`<button type="button" data-act="libins" data-k="${el.dataset.k}" data-id="${x.id}" data-s="${esc((x.title+' '+(x.claim||'')+' '+(x.category||'')).toLowerCase())}"><strong>${esc(x.title)}</strong> <span class="faint">· ${esc(x.type||'')} · ${esc(x.category||'')}</span></button>`).join('')}` : '<p class="empty">Die Bibliothek ist noch leer.</p>';
+      p.hidden = false; const q = p.querySelector('input'); if(q) q.focus(); break;
+    }
+    case 'libins': {
+      const ar = get('args',id), ta = document.getElementById('f_'+el.dataset.k); if(!ar||!ta) break;
+      const line = '- **'+ar.title+'**'+(ar.claim?': '+ar.claim:'')+(ar.evidence?' (Beleg: '+clip(ar.evidence,160)+')':'');
+      ta.value = (ta.value.trim() ? ta.value.replace(/\s+$/,'')+'\n' : '') + line;
+      const cb = document.querySelector(`input[name="f_argIds"][value="${id}"]`); if(cb) cb.checked = true;
+      document.getElementById('pick_'+el.dataset.k).hidden = true; toast('Eingefügt und verknüpft.'); break;
+    }
+    // Trainer
+    case 'tmode': if(!T.turns.length){ T.mode = el.dataset.m; T.feedback = null; T.note=''; if(T.mode==='prep') tmSet(900); else render(); } break;
+    case 'tside': { const s = el.dataset.s; T.side = s==='rand' ? (Math.random()<.5?'Pro':'Contra') : s; render(); break; }
+    case 'trandom': { T.cat = $('#tCat').value; const pool = PRACTICE.filter(p=>!T.cat || p[0]===T.cat); const p = pool[Math.floor(Math.random()*pool.length)]; setMotion({title:p[1], category:p[0], src:'Übungsmotion', context:''}); break; }
+    case 'tgen': T.cat = $('#tCat').value; generateMotion(); break;
+    case 'town': { const i = $('#tOwn'); const t = i.value.trim(); if(!t){ i.focus(); break; } i.value=''; setMotion({title:t, category:'', src:'Eigene', context:''}); break; }
+    case 'tarchive': { if(!T.motion) break; const it = await save('motions', {title:T.motion.title, category:T.motion.category||'', definition:T.motion.context||'', date:today(), position:T.side, format:'BPS', insights:'', tags:['Training']}); T.motion.motionId = it.id; T.motion.src = 'Archiv'; toast('Motion ins Archiv übernommen.'); render(); break; }
+    case 'tstart': trainerStart(); break;
+    case 'tsend': trainerSend(); break;
+    case 'tstop': if(T.ctl) T.ctl.abort(); break;
+    case 'tnew': resetTrainer(); break;
+    case 'tfeedback': trainerFeedback(); break;
+    case 'tsave': trainerSave(); break;
+    case 'ttasks': { (T.feedback.tasks||[]).forEach(t=>save('tasks', {text:t, done:false, source:'KI-Trainer'})); toast('Aufgaben übernommen.'); break; }
+    case 'tmgo': tmToggle(); break;
+    case 'tmreset': tmSet(TM.dur); break;
+    case 'tmset': tmSet(+el.dataset.s); break;
+  }
+});
+
+document.addEventListener('submit', async ev => {
+  const form = ev.target; if(form.id!=='edForm') return;
+  ev.preventDefault();
+  const s = ui.sheet; if(!s) return;
+  const col = form.dataset.col;
+  const data = collect(col);
+  const reqF = flat(SCHEMA[col]).find(f=>f.req && !data[f.k]);
+  if(reqF){ const e = document.getElementById('f_'+reqF.k); e.focus(); e.style.borderColor='var(--bad)'; toast(reqF.l+' fehlt.'); return; }
+  if(col==='journal' && data.motionId==='__new'){
+    const t = ($('#f_newMotion').value||'').trim();
+    if(!t){ $('#f_newMotion').focus(); toast('Bitte den Wortlaut der neuen Motion eingeben.'); return; }
+    const m = await save('motions', {title:t, date:data.date, position:data.position, role:data.role, format:'BPS', category:''});
+    data.motionId = m.id;
+  }
+  if(col==='assessments') data.source = 'Selbsteinschätzung';
+  const base = s.id ? (get(col, s.id) || {}) : {};
+  const it = await save(col, Object.assign({}, base, data, {id:s.id||undefined}));
+  toast(COL_NAME[col]+' gespeichert.');
+  if(col==='notes') closeSheet(); else openSheet({kind:'detail', col, id:it.id});
+});
+
+document.addEventListener('input', ev => {
+  const el = ev.target;
+  if(el.dataset.filter){ const [o,k] = el.dataset.filter.split('.'); ui[o][k] = el.value; render(); return; }
+  if(el.id==='gsearch'){ ui.gq = el.value; if(ui.gq.trim()){ if(ui.route!=='search'){ ui.route='search'; history.replaceState(null,'','#search'); } } else if(ui.route==='search'){ ui.route='dashboard'; history.replaceState(null,'','#dashboard'); } render(); return; }
+  if(el.type==='range' && el.dataset.out){ const o = document.getElementById(el.dataset.out); if(o) o.textContent = +el.value || '–'; return; }
+  if(el.classList.contains('pick-q')){ const q = el.value.toLowerCase(); el.parentElement.querySelectorAll('button[data-s]').forEach(b=>b.hidden = !b.dataset.s.includes(q)); return; }
+  if(el.id==='tInput') updateWc();
+});
+document.addEventListener('change', ev => {
+  const el = ev.target;
+  if(el.id==='f_motionId'){ const n = $('#f_newMotion'); if(n){ n.hidden = el.value!=='__new'; if(!n.hidden) n.focus(); } const m = get('motions', el.value); if(m && !ui.sheet.id){ const p = $('#f_position'); if(p && (m.position==='Pro'||m.position==='Contra')) p.value = m.position; const r = $('#f_role'); if(r && !r.value && m.role) r.value = m.role; } }
+  if(el.id==='tArch' && el.value){ const m = get('motions', el.value); if(m){ T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; T.note=''; render(); } }
+  if(el.id==='tCat') T.cat = el.value;
+  if(el.id==='importFile' && el.files && el.files[0]){ handleImport(el.files[0]); el.value = ''; }
+});
+document.addEventListener('keydown', ev => {
+  const el = ev.target;
+  if(ev.key==='Escape' && ui.sheet){ const p = el.closest && el.closest('.picker'); if(p){ p.hidden = true; return; } if(ui.sheet.kind!=='edit') closeSheet(); return; }
+  if(ev.key==='Enter' && el.dataset && el.dataset.tagadd){
+    ev.preventDefault(); const v = el.value.trim(); if(!v) return;
+    const box = document.querySelector(`[data-tagk="${el.dataset.tagadd}"]`);
+    let ex = [...box.querySelectorAll('.chip')].find(c=>c.dataset.v.toLowerCase()===v.toLowerCase());
+    if(!ex){ ex = document.createElement('button'); ex.type='button'; ex.className='chip'; ex.dataset.act='tagtoggle'; ex.dataset.v=v; ex.textContent=v; box.appendChild(ex); }
+    ex.classList.add('on'); el.value = ''; return;
+  }
+  if(ev.key==='Enter' && (ev.metaKey||ev.ctrlKey) && el.id==='tInput'){ ev.preventDefault(); trainerSend(); }
+  if(ev.key==='Enter' && ['goalIn','taskIn','tOwn'].includes(el.id)){ ev.preventDefault(); document.querySelector({goalIn:'[data-act=addgoal]',taskIn:'[data-act=addtask]',tOwn:'[data-act=town]'}[el.id]).click(); }
+});
+
+/* Start */
+ui.route = parseHash();
+render();
+initStore();
+getSample().then(()=>{ if(ui.route==='trainer') render(); });
+})();
+</script>
