@@ -505,6 +505,9 @@ function md(t){
 }
 function toast(msg){ const d = document.createElement('div'); d.textContent = msg; $('#toast').appendChild(d); setTimeout(()=>d.remove(), 2800); }
 const posChip = p => p==='Pro' ? '<span class="chip pro">Pro</span>' : p==='Contra' ? '<span class="chip contra">Contra</span>' : p ? `<span class="chip">${esc(p)}</span>` : '';
+const isMine = m => m && m.participated==='Ja';
+const langChip = m => m && m.language ? `<span class="chip">${m.language==='Englisch'?'EN':'DE'}</span>` : '';
+const sideChip = p => p==='Pro' ? '<span class="chip pro">Regierung</span>' : p==='Contra' ? '<span class="chip contra">Opposition</span>' : posChip(p);
 const exChip = it => it && it.example ? '<span class="chip ex">Beispiel</span>' : '';
 const get = (col,id) => S[col].find(x=>x.id===id);
 function journalTitle(e){ const m = e.motionId && get('motions', e.motionId); return m ? m.title : (e.title || 'Debatte ohne verknüpfte Motion'); }
@@ -587,12 +590,13 @@ async function remove(col, id){
    UI-Zustand & Rendering
    ========================================================= */
 const ROUTES = [
-  ['dashboard','Übersicht'],['motions','Motion-Archiv'],['journal','Debattenjournal'],['library','Argumente'],
+  ['dashboard','Übersicht'],['mine','Meine Debatten'],['motions','Motion-Archiv'],['journal','Debattenjournal'],['library','Argumente'],
   ['trainer','KI-Trainer'],['progress','Fortschritt'],['knowledge','Wissen']
 ];
 const ui = {
   route:'dashboard', sheet:null,
-  mf:{q:'',cat:'',pos:'',time:'all',sort:'date-desc'},
+  mf:{q:'',cat:'',pos:'',lang:'',time:'all',sort:'date-desc'},
+  mine:{lang:''},
   jf:{q:'',tag:''},
   lf:{q:'',cat:'',type:'',side:''},
   pf:{on:new Set(SKILLS.map(s=>s[0]))},
@@ -619,13 +623,13 @@ function render(){
   const st = $('#status');
   if(store.mode==='db'){ st.className = 'status ok'; st.innerHTML = '<i></i><span>'+(store.slow && store.loaded.size<COLS.length ? 'Daten noch nicht erreichbar – Anzeige evtl. veraltet.' : store.err ? 'Teilweise nicht erreichbar ('+esc(store.err)+')' : 'Gespeichert in deinem Konto, privat für dich.')+'</span>'; }
   else if(store.mode==='local'){ st.className = 'status loc'; st.innerHTML = '<i></i><span>Nur in diesem Browser gespeichert. Regelmäßig sichern.</span>'; }
-  const v = {dashboard:vDashboard, motions:vMotions, journal:vJournal, library:vLibrary, trainer:vTrainer, progress:vProgress, knowledge:vKnowledge, search:vSearch}[ui.route] || vDashboard;
+  const v = {dashboard:vDashboard, mine:vMine, motions:vMotions, journal:vJournal, library:vLibrary, trainer:vTrainer, progress:vProgress, knowledge:vKnowledge, search:vSearch}[ui.route] || vDashboard;
   swap($('#main'), '<div class="wrap">'+v()+'</div>');
   if(ui.route==='trainer') afterTrainerRender();
   if(ui.sheet && ui.sheet.kind==='detail') renderSheet();
 }
 function renderNav(){
-  const counts = {motions:S.motions.length, journal:S.journal.length, library:S.args.length, trainer:S.sessions.length};
+  const counts = {mine:S.motions.filter(isMine).length, motions:S.motions.length, journal:S.journal.length, library:S.args.length, trainer:S.sessions.length};
   $('#nav').innerHTML = ROUTES.map(([k,l])=>`<button data-act="go" data-r="${k}" class="${ui.route===k?'on':''}" ${ui.route===k?'aria-current="page"':''}><span class="lbl">${l}</span>${counts[k]!=null?`<span class="cnt">${counts[k]}</span>`:''}</button>`).join('');
 }
 function loadingNote(){ return store.mode==='init' || (store.mode==='db' && store.loaded.size<COLS.length && !store.slow) ? '<p class="empty">Lade deine Einträge …</p>' : ''; }
@@ -713,6 +717,28 @@ function suggestionsHtml(){
   return `<div class="linked">${s.items.map((t,i)=>`<button data-act="takesug" data-i="${i}"><span><span class="lt">${esc(t.text)}</span><div class="ls">${esc(t.why||'')}${t.skill&&SKILL_LABEL[t.skill]?' · '+SKILL_LABEL[t.skill]:''}</div></span><span class="mini">übernehmen</span></button>`).join('')}</div>`;
 }
 
+/* ---------- Meine Debatten ---------- */
+function vMine(){
+  const lang = ui.mine.lang;
+  const all = S.motions.filter(isMine).sort(byDateDesc);
+  const n = l => all.filter(m=>m.language===l).length;
+  const groups = lang ? [[lang, all.filter(m=>m.language===lang)]] : [['Deutsch', all.filter(m=>m.language==='Deutsch')], ['Englisch', all.filter(m=>m.language==='Englisch')], ['Ohne Sprache', all.filter(m=>m.language!=='Deutsch' && m.language!=='Englisch')]].filter(g=>g[1].length);
+  const refl = m => S.journal.filter(j=>j.motionId===m.id).length;
+  const row = m => `<div class="row" role="button" tabindex="0" data-act="open" data-col="motions" data-id="${m.id}"><span class="d">${fmtShort(m.date)}</span><span class="t">${esc(m.title)}</span><span class="m">${sideChip(m.position)}${m.format?`<span class="chip">${esc(m.format)}</span>`:''}</span><span class="s">${esc(m.role||'Rolle nicht angegeben')} · ${refl(m) ? `${refl(m)} Reflexion${refl(m)>1?'en':''}` : `<button class="mini" data-act="reflect" data-id="${m.id}">Reflexion schreiben</button>`}</span></div>`;
+  return `
+  <header class="head"><div><div class="eyebrow">Selbst debattiert</div><h2>Meine Debatten</h2><p>Alle Motions, bei denen du selbst gesprochen hast, getrennt nach deutschen und englischen Debatten.</p></div>
+    <div class="actions"><button class="btn primary" data-act="new" data-col="motions">Debatte eintragen</button></div></header>
+  ${loadingNote()}
+  <section class="stats" style="grid-template-columns:repeat(3,minmax(0,1fr))" aria-label="Nach Sprache">
+    <button class="stat" data-act="setf" data-f="mine.lang" data-v=""><span class="eyebrow">Gesamt</span><span class="n">${all.length}</span><span class="sub">${all.filter(m=>m.position==='Pro').length} × Regierung · ${all.filter(m=>m.position==='Contra').length} × Opposition</span></button>
+    <button class="stat" data-act="setf" data-f="mine.lang" data-v="Deutsch"><span class="eyebrow">Deutsch</span><span class="n">${n('Deutsch')}</span><span class="sub">Debatten auf Deutsch</span></button>
+    <button class="stat" data-act="setf" data-f="mine.lang" data-v="Englisch"><span class="eyebrow">Englisch</span><span class="n">${n('Englisch')}</span><span class="sub">Debates in English</span></button>
+  </section>
+  <div class="seg" role="group" aria-label="Sprache">${[['','Alle'],['Deutsch','Deutsch'],['Englisch','Englisch']].map(([k,l])=>`<button data-act="setf" data-f="mine.lang" data-v="${k}" class="${lang===k?'on':''}">${l}</button>`).join('')}</div>
+  ${all.length ? groups.map(([g,ms])=>`<section class="panel"><div class="panel-h"><h3>${g==='Englisch'?'Englische Debatten':g==='Deutsch'?'Deutsche Debatten':'Ohne Sprachangabe'}</h3><span class="mono faint">${ms.length}</span></div>${ms.length?`<div class="rows">${ms.map(row).join('')}</div>`:'<p class="empty">Noch keine Debatte in dieser Sprache.</p>'}</section>`).join('') || '<section class="panel"><p class="empty">Noch keine Debatte in dieser Sprache.</p></section>'
+  : `<section class="panel"><p class="empty"><b>Noch keine eigenen Debatten.</b> Trag eine Motion ein und wähle „Selbst debattiert: Ja“.</p></section>`}`;
+}
+
 /* ---------- Motion-Archiv ---------- */
 function motionStatus(m){ return m.date && m.date>=today() ? 'Geplant' : 'Vergangen'; }
 function vMotions(){
@@ -720,6 +746,7 @@ function vMotions(){
   let list = S.motions.filter(m=>{
     if(f.cat && m.category!==f.cat) return false;
     if(f.pos && m.position!==f.pos) return false;
+    if(f.lang && m.language!==f.lang) return false;
     if(f.time==='past' && motionStatus(m)!=='Vergangen') return false;
     if(f.time==='future' && motionStatus(m)!=='Geplant') return false;
     if(q){ const hay = [m.title,m.definition,m.pro,m.contra,m.line,m.rebuttals,m.insights,m.improve,(m.tags||[]).join(' '),(m.notes||[]).map(n=>n.text).join(' ')].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
@@ -728,7 +755,7 @@ function vMotions(){
   const sorters = {'date-desc':byDateDesc, 'date-asc':(a,b)=>-byDateDesc(a,b), 'alpha':(a,b)=>a.title.localeCompare(b.title,'de'), 'cat':(a,b)=>(a.category||'').localeCompare(b.category||'','de') || byDateDesc(a,b)};
   list.sort(sorters[f.sort]||byDateDesc);
   const jc = id => S.journal.filter(j=>j.motionId===id).length;
-  const rowH = m => `<button class="row" data-act="open" data-col="motions" data-id="${m.id}"><span class="d">${fmtShort(m.date)}</span><span class="t">${esc(m.title)}</span><span class="m">${posChip(m.position)}<span class="chip">${esc(m.category||'ohne Thema')}</span>${motionStatus(m)==='Geplant'?'<span class="chip on">Geplant</span>':''}${exChip(m)}</span>${(jc(m.id)||(m.argIds||[]).length)?`<span class="s">${jc(m.id)?jc(m.id)+' Reflexion'+(jc(m.id)>1?'en':''):''}${jc(m.id)&&(m.argIds||[]).length?' · ':''}${(m.argIds||[]).length?(m.argIds.length+' verknüpfte Argumente'):''}</span>`:''}</button>`;
+  const rowH = m => `<button class="row" data-act="open" data-col="motions" data-id="${m.id}"><span class="d">${fmtShort(m.date)}</span><span class="t">${esc(m.title)}</span><span class="m">${langChip(m)}${posChip(m.position)}<span class="chip">${esc(m.category||'ohne Thema')}</span>${motionStatus(m)==='Geplant'?'<span class="chip on">Geplant</span>':''}${exChip(m)}</span>${(jc(m.id)||(m.argIds||[]).length)?`<span class="s">${jc(m.id)?jc(m.id)+' Reflexion'+(jc(m.id)>1?'en':''):''}${jc(m.id)&&(m.argIds||[]).length?' · ':''}${(m.argIds||[]).length?(m.argIds.length+' verknüpfte Argumente'):''}</span>`:''}</button>`;
   let body;
   if(!list.length) body = S.motions.length ? '<p class="empty">Keine Motion passt zu diesen Filtern.</p>' : '<p class="empty"><b>Das Archiv ist leer.</b> Lege vergangene Clubdebatten nachträglich an oder plane die nächste.</p>';
   else if(f.sort==='cat'){
@@ -742,6 +769,7 @@ function vMotions(){
   <div class="toolbar">
     <input type="search" id="mf_q" data-filter="mf.q" value="${esc(f.q)}" placeholder="Motion, Argument, Erkenntnis suchen …" aria-label="Suchen">
     <select id="mf_cat" data-filter="mf.cat" aria-label="Themengebiet"><option value="">Alle Themengebiete</option>${CATS.map(c=>`<option ${f.cat===c?'selected':''}>${c}</option>`).join('')}</select>
+    <select id="mf_lang" data-filter="mf.lang" aria-label="Sprache"><option value="">Deutsch & Englisch</option><option ${f.lang==='Deutsch'?'selected':''}>Deutsch</option><option ${f.lang==='Englisch'?'selected':''}>Englisch</option></select>
     <select id="mf_pos" data-filter="mf.pos" aria-label="Position"><option value="">Pro & Contra</option><option ${f.pos==='Pro'?'selected':''}>Pro</option><option ${f.pos==='Contra'?'selected':''}>Contra</option><option ${f.pos==='Offen'?'selected':''}>Offen</option></select>
     <div class="seg" role="group" aria-label="Zeitraum">${[['all','Alle'],['past','Vergangen'],['future','Geplant']].map(([k,l])=>`<button data-act="setf" data-f="mf.time" data-v="${k}" class="${f.time===k?'on':''}">${l}</button>`).join('')}</div>
     <select id="mf_sort" data-filter="mf.sort" aria-label="Sortierung"><option value="date-desc" ${f.sort==='date-desc'?'selected':''}>Neueste zuerst</option><option value="date-asc" ${f.sort==='date-asc'?'selected':''}>Älteste zuerst</option><option value="cat" ${f.sort==='cat'?'selected':''}>Nach Themengebiet</option><option value="alpha" ${f.sort==='alpha'?'selected':''}>Alphabetisch</option></select>
@@ -936,8 +964,9 @@ function vSearch(){
 const SCHEMA = {
   motions:[
     {k:'title',l:'Motion / Debattenfrage',t:'text',req:1,ph:'DH würde …'},
-    {row:[{k:'date',l:'Datum der Debatte',t:'date'},{k:'category',l:'Themengebiet',t:'select',opts:['',...CATS]},{k:'position',l:'Eigene Position',t:'select',opts:['Pro','Contra','Offen']}]},
-    {row:[{k:'format',l:'Format',t:'select',opts:['BPS','OPD','Andere']},{k:'role',l:'Rolle',t:'text',list:'roles',ph:'z. B. Eröffnende Opposition (LO)'}]},
+    {row:[{k:'date',l:'Datum der Debatte',t:'date'},{k:'category',l:'Themengebiet',t:'select',opts:['',...CATS]},{k:'language',l:'Sprache',t:'select',opts:['Deutsch','Englisch']}]},
+    {row:[{k:'participated',l:'Selbst debattiert?',t:'select',opts:['Ja','Nein'],labels:{Ja:'Ja – unter „Meine Debatten“',Nein:'Nein – nur Archiv'}},{k:'position',l:'Eigene Seite',t:'select',opts:['Pro','Contra','Offen'],labels:{Pro:'Regierung (Pro)',Contra:'Opposition (Contra)',Offen:'Offen'}},{k:'format',l:'Format',t:'select',opts:['','BPS','OPD','Andere']}]},
+    {k:'role',l:'Rolle / Sprecherposition',t:'text',list:'roles',ph:'z. B. Regierung · Erster Sprecher'},
     {k:'definition',l:'Definition & Kontext',t:'area',rows:3},
     {k:'pro',l:'Wichtigste Pro-Argumente',t:'area',lib:1,hint:'ein Argument pro Absatz'},
     {k:'contra',l:'Wichtigste Contra-Argumente',t:'area',lib:1},
@@ -1056,7 +1085,7 @@ function editorHtml(s){
   return `<form class="ed" id="edForm" data-col="${s.col}" novalidate>
     <div class="sheet-top"><div><div class="eyebrow">${s.id?'Bearbeiten':'Neu'} · ${COL_NAME[s.col]}</div><h2>${s.id?esc(clip(itemTitle(s.col,item),80)):({motions:'Neue Motion',journal:'Debatte reflektieren',args:'Neuer Bibliothekseintrag',assessments:'Selbsteinschätzung',notes:'Neue Notiz'}[s.col])}</h2></div><button type="button" class="btn ghost" data-act="close">Abbrechen</button></div>
     ${formHtml(s.col, item, s.preset)}
-    <datalist id="roles">${['Eröffnende Regierung (PM)','Eröffnende Regierung (DPM)','Eröffnende Opposition (LO)','Eröffnende Opposition (DLO)','Schließende Regierung (MG)','Schließende Regierung (GW)','Schließende Opposition (MO)','Schließende Opposition (OW)','OPD Regierung','OPD Opposition','OPD Freie Rede','Jury'].map(r=>`<option value="${r}">`).join('')}</datalist>
+    <datalist id="roles">${['Regierung · Erster Sprecher','Regierung · Zweiter Sprecher','Regierung · Dritter Sprecher','Opposition · Erster Sprecher','Opposition · Zweiter Sprecher','Opposition · Dritter Sprecher','Closing Government · Letzter Sprecher','Eröffnende Regierung (PM)','Eröffnende Regierung (DPM)','Eröffnende Opposition (LO)','Eröffnende Opposition (DLO)','Schließende Regierung (MG)','Schließende Regierung (GW)','Schließende Opposition (MO)','Schließende Opposition (OW)','OPD Regierung','OPD Opposition','OPD Freie Rede','Jury'].map(r=>`<option value="${r}">`).join('')}</datalist>
     <div class="form-foot"><button type="button" class="btn ghost" data-act="close">Abbrechen</button><button type="submit" class="btn primary">Speichern</button></div>
   </form>`;
 }
@@ -1079,7 +1108,7 @@ function dMotion(m){
   const missing = Object.keys(labels).filter(k=>!String(m[k]||'').trim()).map(k=>labels[k]);
   return topBar(`${esc(m.category||'Ohne Themengebiet')} · ${fmtDate(m.date)} · ${motionStatus(m)}`, m.title,
     `<button class="btn primary" data-act="edit" data-col="motions" data-id="${m.id}">Bearbeiten</button><button class="btn" data-act="reflect" data-id="${m.id}">Debatte reflektieren</button><button class="btn" data-act="trainmotion" data-id="${m.id}">Im Trainer üben</button>${delBtn('motions',m.id)}`) +
-  `<div class="meta-line">${posChip(m.position)}${m.format?`<span class="chip">${esc(m.format)}</span>`:''}${m.role?`<span class="chip">${esc(m.role)}</span>`:''}${(m.tags||[]).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}${exChip(m)}</div>
+  `<div class="meta-line">${langChip(m)}${isMine(m)?'<span class="chip on">Selbst debattiert</span>':''}${sideChip(m.position)}${m.format?`<span class="chip">${esc(m.format)}</span>`:''}${m.role?`<span class="chip">${esc(m.role)}</span>`:''}${(m.tags||[]).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}${exChip(m)}</div>
   ${Object.keys(labels).map(k=>sec(labels[k], m[k])).join('')}
   ${missing.length ? `<p class="missing">Noch offen: ${missing.join(', ')}.</p>` : ''}
   ${js.length ? `<section class="sec"><h5>Reflexionen zu dieser Motion</h5>${linkedList(js.map(j=>['journal',j,j.takeaway||j.wentWell||'']))}</section>` : ''}
@@ -1177,6 +1206,7 @@ Grundhaltung: kritisch, anspruchsvoll und fair. Stimme mir nicht zu, nur weil ic
 Halte Antworten kompakt (höchstens etwa 250 Wörter, außer du hältst eine Rede). Kurze Absätze, Aufzählungen mit "- ", Hervorhebungen mit **fett**. Keine Floskeln.
 ${modeRules}
 ${m ? `Motion: "${m.title}"${m.context?'\nKontext/Info-Slide: '+m.context:''}` : 'Keine bestimmte Motion vorgegeben.'}
+${m && (m.language==='Englisch' || /^(TH[WBR]?|THIS HOUSE|DH would)\b/i.test(m.title)) ? 'Dies ist eine englischsprachige Debatte: Halte Reden, Fragen und Bewertungen auf Englisch, gib Coaching-Hinweise aber zusätzlich kurz auf Deutsch.' : ''}
 ${T.mode==='check' ? '' : 'Meine Seite: '+T.side+'.'}
 ${weakContext()}`;
 }
@@ -1456,7 +1486,7 @@ document.addEventListener('click', async ev => {
   if(el.tagName==='INPUT' && el.type==='checkbox' && a!=='toggle') return;
   switch(a){
     case 'go': if(ui.sheet) closeSheet(); go(el.dataset.r); break;
-    case 'new': openSheet({kind:'edit', col, id:null, preset: col==='journal'||col==='assessments' ? {date:today()} : col==='motions' ? {date:today(), position:'Pro', format:'BPS'} : col==='args' ? {strength:3} : {}}); break;
+    case 'new': openSheet({kind:'edit', col, id:null, preset: col==='journal'||col==='assessments' ? {date:today()} : col==='motions' ? {date:today(), position:'Pro', language:'Deutsch', participated:'Ja'} : col==='args' ? {strength:3} : {}}); break;
     case 'edit': openSheet({kind:'edit', col, id}); break;
     case 'open': openSheet({kind:'detail', col, id}); break;
     case 'close': closeSheet(); break;
@@ -1485,7 +1515,7 @@ document.addEventListener('click', async ev => {
       toast('Nachtrag gespeichert.'); break;
     }
     case 'reflect': openSheet({kind:'edit', col:'journal', id:null, preset:{motionId:id, date:get('motions',id)?.date||today(), position:get('motions',id)?.position==='Contra'?'Contra':'Pro', role:get('motions',id)?.role||''}}); break;
-    case 'trainmotion': { const m = get('motions',id); if(!m) break; closeSheet(); resetTrainer(); T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; go('trainer'); break; }
+    case 'trainmotion': { const m = get('motions',id); if(!m) break; closeSheet(); resetTrainer(); T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, language:m.language||'', src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; go('trainer'); break; }
     case 'trainarg': { const ar = get('args',id); if(!ar) break; closeSheet(); resetTrainer(); T.mode = 'check'; go('trainer'); setTimeout(()=>{ const i = $('#tInput'); if(i){ i.value = [ar.title, ar.claim&&'These: '+ar.claim, ar.reasoning&&'Mechanismus: '+ar.reasoning, ar.evidence&&'Beleg: '+ar.evidence, ar.impact&&'Impact: '+ar.impact].filter(Boolean).join('\n'); updateWc(); i.focus(); } }, 50); break; }
     case 'resume': { const s = get('sessions',id); if(!s) break; closeSheet(); if(T.ctl) T.ctl.abort(); Object.assign(T, {mode:s.mode||'duel', side:s.side||'Pro', motion:s.motion?{title:s.motion, category:s.category||'', src:'Fortgesetzt', motionId:s.motionId||''}:null, turns:(s.turns||[]).slice(), feedback:s.feedback||null, sessionId:s.id, busy:false, note:''}); go('trainer'); break; }
     case 'toggleskill': { const k = el.dataset.k; ui.pf.on.has(k) ? ui.pf.on.delete(k) : ui.pf.on.add(k); render(); break; }
@@ -1519,7 +1549,7 @@ document.addEventListener('click', async ev => {
     case 'trandom': { T.cat = $('#tCat').value; const pool = PRACTICE.filter(p=>!T.cat || p[0]===T.cat); const p = pool[Math.floor(Math.random()*pool.length)]; setMotion({title:p[1], category:p[0], src:'Übungsmotion', context:''}); break; }
     case 'tgen': T.cat = $('#tCat').value; generateMotion(); break;
     case 'town': { const i = $('#tOwn'); const t = i.value.trim(); if(!t){ i.focus(); break; } i.value=''; setMotion({title:t, category:'', src:'Eigene', context:''}); break; }
-    case 'tarchive': { if(!T.motion) break; const it = await save('motions', {title:T.motion.title, category:T.motion.category||'', definition:T.motion.context||'', date:today(), position:T.side, format:'BPS', insights:'', tags:['Training']}); T.motion.motionId = it.id; T.motion.src = 'Archiv'; toast('Motion ins Archiv übernommen.'); render(); break; }
+    case 'tarchive': { if(!T.motion) break; const it = await save('motions', {title:T.motion.title, category:T.motion.category||'', definition:T.motion.context||'', date:today(), position:T.side, language:T.motion.language||'', participated:'Nein', insights:'', tags:['Training']}); T.motion.motionId = it.id; T.motion.src = 'Archiv'; toast('Motion ins Archiv übernommen.'); render(); break; }
     case 'tstart': trainerStart(); break;
     case 'tsend': trainerSend(); break;
     case 'tstop': if(T.ctl) T.ctl.abort(); break;
@@ -1544,7 +1574,7 @@ document.addEventListener('submit', async ev => {
   if(col==='journal' && data.motionId==='__new'){
     const t = ($('#f_newMotion').value||'').trim();
     if(!t){ $('#f_newMotion').focus(); toast('Bitte den Wortlaut der neuen Motion eingeben.'); return; }
-    const m = await save('motions', {title:t, date:data.date, position:data.position, role:data.role, format:'BPS', category:''});
+    const m = await save('motions', {title:t, date:data.date, position:data.position, role:data.role, participated:'Ja', category:''});
     data.motionId = m.id;
   }
   if(col==='assessments') data.source = 'Selbsteinschätzung';
@@ -1565,7 +1595,7 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const el = ev.target;
   if(el.id==='f_motionId'){ const n = $('#f_newMotion'); if(n){ n.hidden = el.value!=='__new'; if(!n.hidden) n.focus(); } const m = get('motions', el.value); if(m && !ui.sheet.id){ const p = $('#f_position'); if(p && (m.position==='Pro'||m.position==='Contra')) p.value = m.position; const r = $('#f_role'); if(r && !r.value && m.role) r.value = m.role; } }
-  if(el.id==='tArch' && el.value){ const m = get('motions', el.value); if(m){ T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; T.note=''; render(); } }
+  if(el.id==='tArch' && el.value){ const m = get('motions', el.value); if(m){ T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, language:m.language||'', src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; T.note=''; render(); } }
   if(el.id==='tCat') T.cat = el.value;
   if(el.id==='importFile' && el.files && el.files[0]){ handleImport(el.files[0]); el.value = ''; }
 });
@@ -1579,6 +1609,7 @@ document.addEventListener('keydown', ev => {
     if(!ex){ ex = document.createElement('button'); ex.type='button'; ex.className='chip'; ex.dataset.act='tagtoggle'; ex.dataset.v=v; ex.textContent=v; box.appendChild(ex); }
     ex.classList.add('on'); el.value = ''; return;
   }
+  if((ev.key==='Enter'||ev.key===' ') && el.getAttribute && el.getAttribute('role')==='button'){ ev.preventDefault(); el.click(); return; }
   if(ev.key==='Enter' && (ev.metaKey||ev.ctrlKey) && el.id==='tInput'){ ev.preventDefault(); trainerSend(); }
   if(ev.key==='Enter' && ['goalIn','taskIn','tOwn'].includes(el.id)){ ev.preventDefault(); document.querySelector({goalIn:'[data-act=addgoal]',taskIn:'[data-act=addtask]',tOwn:'[data-act=town]'}[el.id]).click(); }
 });
