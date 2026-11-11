@@ -1257,7 +1257,7 @@ function vTrainer(){
         <div class="clock-sub" id="clockSub">${clockSub()}</div>
         <div class="toolbar" style="justify-content:center"><button class="btn primary" data-act="tmgo" id="tmGo" ${started?'disabled':''}>${TM.run?'Pause':TM.left<TM.dur?'Weiter':'Vorbereitung starten'}</button><button class="btn" data-act="tmreset" ${started?'disabled':''}>Zurücksetzen</button></div>
         <div class="chips" style="justify-content:center">${[[900,'15:00'],[600,'10:00'],[300,'5:00'],[60,'1:00']].map(([s,l])=>`<button class="chip ${TM.dur===s?'on':''}" data-act="tmset" data-s="${s}" ${started||TM.run?'disabled':''}>${l}</button>`).join('')}</div>
-        ${!started && !TM.done && T.mode!=='check' ? `<div class="toolbar" style="justify-content:center"><button class="mini" data-act="tmskip">Vorbereitung überspringen</button></div>` : ''}
+        ${!started && !TM.done && T.mode!=='check' ? `<button class="btn" style="justify-content:center" data-act="tmskip" ${T.busy?'disabled':''}>${kickoff() ? 'Vorbereitung überspringen – KI beginnt sofort' : 'Vorbereitung überspringen'}</button>` : ''}
       </section>
     </div>
     <div class="col">
