@@ -19,6 +19,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink)}
 body{font-family:var(--f-ui);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -1173,7 +1174,7 @@ function dSimple(x, col){ return topBar(COL_NAME[col], x.text, delBtn(col,x.id))
    KI-Trainer
    ========================================================= */
 const T = {mode:'duel', motion:null, side:'Pro', turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, cat:'', note:''};
-const TM = {dur:420, left:420, run:false, iv:null, last:0};
+const TM = {dur:900, left:900, run:false, iv:null, last:0, done:false};
 let sampleFn; let sampleState = 'unknown';
 async function getSample(){
   if(sampleFn !== undefined) return sampleFn;
@@ -1194,7 +1195,7 @@ function weakContext(){
 function rulesText(){
   const m = T.motion;
   const modeRules = {
-    duel:`Modus: Debatte gegen mich. Du vertrittst konsequent die Gegenseite (${opp()}). Halte echte, starke Reden mit zwei bis drei Argumenten (These, Mechanismus, Impact) und widerlege meine Punkte direkt und konkret. Gib in diesem Modus KEIN Coaching-Feedback, sondern debattiere. Beende jede Rede mit einer scharfen Zwischenfrage an mich. Reden etwa 300–400 Wörter.`,
+    duel:`Modus: Debatte gegen mich. Du vertrittst konsequent die Gegenseite (${sideName(opp())}). Nach der Vorbereitungszeit beginnst DU mit deiner ersten Rede, egal welche Seite im Format sonst eröffnet. Vertrittst du die Opposition, nimm in deiner ersten Rede die stärksten erwartbaren Regierungsargumente vorweg. Halte echte, starke Reden mit zwei bis drei Argumenten (These, Mechanismus, Impact) und widerlege meine Punkte direkt und konkret. Gib in diesem Modus KEIN Coaching-Feedback, sondern debattiere. Beende jede Rede mit einer scharfen Zwischenfrage an mich. Reden etwa 300–400 Wörter.`,
     prep:`Modus: Vorbereitungs-Check. Ich habe 15 Minuten vorbereitet und schicke dir meinen Case für die Seite ${T.side}. Prüfe wie ein strenger Juror: Wo fehlen Mechanismen? Welche Gegenargumente habe ich übersehen? Welcher Clash entscheidet die Debatte? Was würde die Gegenseite zuerst angreifen? Stelle danach zwei bohrende Nachfragen.`,
     rebuttal:`Modus: Rebuttal-Drill. Präsentiere jeweils EIN starkes Argument der Gegenseite (${opp()}) mit Mechanismus und Beispiel (max. 120 Wörter). Ich widerlege. Bewerte meinen Rebuttal knapp: Welche Ebene habe ich angegriffen (nicht wahr / nicht kausal / nicht wichtig / nicht exklusiv / Turn)? Was hätte stärker gewirkt? Note 1–10. Bring dann sofort das nächste, schwierigere Argument.`,
     poi:`Modus: POI-Drill. Stelle mir jeweils EINE kurze, scharfe Zwischenfrage (max. 25 Wörter) gegen meine Seite (${T.side}). Ich antworte in ein bis zwei Sätzen. Bewerte jede Antwort in einer Zeile (Treffsicherheit, Ruhe, Rückführung auf mein Argument, Note 1–10) und stelle sofort die nächste, schwierigere Frage.`,
@@ -1210,11 +1211,13 @@ ${m && (m.language==='Englisch' || /^(TH[WBR]?|THIS HOUSE|DH would)\b/i.test(m.t
 ${T.mode==='check' ? '' : 'Meine Seite: '+T.side+'.'}
 ${weakContext()}`;
 }
+const sideName = s => s==='Pro' ? 'Regierung' : s==='Contra' ? 'Opposition' : s;
 function kickoff(){
-  return {duel: T.side==='Contra' ? 'Eröffne die Debatte mit deiner Rede für Pro.' : null, rebuttal:'Bring das erste Argument.', poi:'Erste Zwischenfrage bitte.'}[T.mode] || null;
+  return {duel:`Die Vorbereitungszeit ist vorbei. Halte jetzt deine erste Rede für die ${sideName(opp())}.`, rebuttal:'Die Vorbereitungszeit ist vorbei. Bring das erste Argument.', poi:'Die Vorbereitungszeit ist vorbei. Erste Zwischenfrage bitte.'}[T.mode] || null;
 }
 function sysNote(){
-  return {duel: T.side==='Pro' ? 'Du eröffnest. Schreib deine Rede (oder deine Stichpunkte) und schick sie ab.' : 'Die KI eröffnet für Pro.', prep:'Starte den 15-Minuten-Timer, bereite deinen Case vor und schick ihn dann ab.', check:'Füge dein Argument ein und schick es ab.', switch:'Schreib zuerst deine stärkste Pro-Skizze.', rebuttal:'', poi:''}[T.mode];
+  const after = {duel:`Danach hält die KI ihre erste Rede für die ${sideName(opp())}, und du antwortest.`, rebuttal:`Danach bringt die KI das erste Argument der ${sideName(opp())}.`, poi:'Danach stellt dir die KI die erste Zwischenfrage.', prep:'Danach schickst du deinen Case zur Prüfung.', switch:'Danach schreibst du zuerst deine stärkste Skizze für die Regierung.', check:''}[T.mode];
+  return T.mode==='check' ? 'Füge dein Argument ein und schick es ab.' : 'Starte die Vorbereitungszeit. '+after+' Notizen kannst du schon jetzt ins Eingabefeld schreiben.';
 }
 function msgHtml(t, streaming){
   if(t.role==='sys') return `<div class="msg sys">${esc(t.content)}</div>`;
@@ -1246,14 +1249,15 @@ function vTrainer(){
         <div class="inline-add"><input type="text" id="tOwn" data-keep placeholder="Eigene Motion eingeben" aria-label="Eigene Motion" ${started?'disabled':''}><button class="btn" data-act="town" ${started?'disabled':''}>Übernehmen</button></div>
       </section>
       ${T.mode!=='check' ? `<section class="panel"><div class="panel-h"><h3>Deine Seite</h3></div>
-        <div class="seg" role="group" aria-label="Seite">${['Pro','Contra'].map(s=>`<button data-act="tside" data-s="${s}" class="${T.side===s?'on':''}" ${started?'disabled':''}>${s}</button>`).join('')}<button data-act="tside" data-s="rand" ${started?'disabled':''}>Zufall</button></div></section>` : ''}
+        <div class="seg" role="group" aria-label="Seite">${['Pro','Contra'].map(s=>`<button data-act="tside" data-s="${s}" class="${T.side===s?'on':''}" ${started?'disabled':''}>${sideName(s)}</button>`).join('')}<button data-act="tside" data-s="rand" ${started?'disabled':''}>Zufall</button></div></section>` : ''}
       <section class="panel timer">
-        <div class="panel-h"><h3>Redezeit</h3><span class="eyebrow" id="tmLabel">${TM.dur===420?'BPS-Rede':TM.dur===900?'Vorbereitung':TM.dur===210?'Freie Rede (OPD)':'Timer'}</span></div>
+        <div class="panel-h"><h3>Vorbereitungszeit</h3><span class="eyebrow" id="tmLabel">${started?'läuft nicht mehr':TM.run?'läuft':'bereit'}</span></div>
         <div class="clock" id="clock">${clockText()}</div>
         <div class="tbar"><i id="tbar" style="width:${(1-TM.left/TM.dur)*100}%"></i></div>
         <div class="clock-sub" id="clockSub">${clockSub()}</div>
-        <div class="toolbar" style="justify-content:center"><button class="btn primary" data-act="tmgo" id="tmGo">${TM.run?'Pause':'Start'}</button><button class="btn" data-act="tmreset">Zurücksetzen</button></div>
-        <div class="chips" style="justify-content:center">${[[420,'7:00'],[900,'15:00'],[210,'3:30'],[60,'1:00']].map(([s,l])=>`<button class="chip ${TM.dur===s?'on':''}" data-act="tmset" data-s="${s}">${l}</button>`).join('')}</div>
+        <div class="toolbar" style="justify-content:center"><button class="btn primary" data-act="tmgo" id="tmGo" ${started?'disabled':''}>${TM.run?'Pause':TM.left<TM.dur?'Weiter':'Vorbereitung starten'}</button><button class="btn" data-act="tmreset" ${started?'disabled':''}>Zurücksetzen</button></div>
+        <div class="chips" style="justify-content:center">${[[900,'15:00'],[600,'10:00'],[300,'5:00'],[60,'1:00']].map(([s,l])=>`<button class="chip ${TM.dur===s?'on':''}" data-act="tmset" data-s="${s}" ${started||TM.run?'disabled':''}>${l}</button>`).join('')}</div>
+        ${!started && !TM.done && T.mode!=='check' ? `<div class="toolbar" style="justify-content:center"><button class="mini" data-act="tmskip">Vorbereitung überspringen</button></div>` : ''}
       </section>
     </div>
     <div class="col">
@@ -1265,7 +1269,6 @@ function vTrainer(){
           ${T.busy ? msgHtml({role:'assistant',content:T.stream||''}, true) : ''}
           ${T.note ? `<div class="msg sys">${esc(T.note)}</div>` : ''}
         </div>
-        ${!started && kickoff() && (m||!MODES[T.mode].needsMotion) ? `<div class="toolbar"><button class="btn primary" data-act="tstart" ${sample==='none'?'disabled':''}>Einheit starten</button></div>` : ''}
         <div class="composer">
           <textarea id="tInput" data-keep placeholder="${T.mode==='duel'?'Deine Rede oder Erwiderung …':T.mode==='check'?'Dein Argument …':T.mode==='poi'?'Deine Antwort in ein bis zwei Sätzen …':'Deine Antwort …'}" aria-label="Deine Eingabe" ${(MODES[T.mode].needsMotion&&!m)?'disabled':''}></textarea>
           <div class="row-b">
@@ -1286,7 +1289,7 @@ function vTrainer(){
 function afterTrainerRender(){ const c = $('#chat'); if(c && (T.busy || T.justSent)){ c.lastElementChild && c.lastElementChild.scrollIntoView({block:'nearest'}); T.justSent = false; } updateWc(); }
 function updateWc(){ const i = $('#tInput'), w = $('#wc'); if(i && w){ const n = i.value.trim() ? i.value.trim().split(/\s+/).length : 0; w.textContent = n ? n+' Wörter · ca. '+Math.max(1,Math.round(n/130))+' Min. gesprochen' : ''; } }
 function setMotion(mo){ T.motion = mo; T.note = ''; render(); }
-function resetTrainer(){ if(T.ctl) T.ctl.abort(); Object.assign(T, {turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, stream:'', note:''}); render(); }
+function resetTrainer(){ if(T.ctl) T.ctl.abort(); clearInterval(TM.iv); Object.assign(TM, {run:false, done:false, left:TM.dur}); Object.assign(T, {turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, stream:'', note:''}); render(); }
 
 async function callTrainer(){
   const sample = await getSample();
@@ -1320,6 +1323,7 @@ async function trainerSend(){
 }
 async function trainerStart(){
   const k = kickoff(); if(!k) return;
+  if(!(await getSample())){ T.note = 'Der KI-Trainer ist in dieser Ansicht nicht verfügbar.'; render(); return; }
   T.turns.push({role:'user', content:k, hidden:true});
   await callTrainer();
 }
@@ -1357,26 +1361,39 @@ async function trainerSave(){
 }
 
 /* Timer */
-function clockText(){ const s = Math.abs(TM.left); return (TM.left<0?'+':'')+Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
+function clockText(){ const s = Math.max(0, Math.ceil(TM.left)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function clockSub(){
-  if(TM.left<=0) return 'Zeit ist um – Schlusssatz!';
-  const el = TM.dur-TM.left;
-  if(TM.dur===420){ if(el<60) return 'Geschützte Zeit · keine Zwischenfragen'; if(TM.left<=60) return 'Geschützte Zeit · Weighing & Schluss'; return 'Zwischenfragen erlaubt'; }
-  if(TM.dur===900){ if(el<180) return 'Ideen sammeln'; if(el<480) return 'Clash & Linie festlegen'; if(el<780) return 'Argumente ausformulieren'; return 'Gegenargumente notieren'; }
-  return '';
+  if(TM.done || TM.left<=0) return 'Vorbereitung vorbei';
+  if(!TM.run && TM.left===TM.dur) return 'Die KI beginnt, sobald die Zeit abläuft';
+  const f = (TM.dur-TM.left)/TM.dur;
+  if(f<0.2) return 'Ideen sammeln · Stakeholder notieren';
+  if(f<0.53) return 'Clash & Linie festlegen';
+  if(f<0.87) return 'Argumente ausformulieren';
+  return 'Gegenargumente vorwegnehmen';
+}
+function beep(){ try{ const C = window.AudioContext||window.webkitAudioContext; const ctx = new C(); [0,0.25].forEach(d=>{ const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.15, ctx.currentTime+d); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+d+0.2); o.connect(g).connect(ctx.destination); o.start(ctx.currentTime+d); o.stop(ctx.currentTime+d+0.22); }); }catch(e){} }
+async function prepDone(){
+  clearInterval(TM.iv); TM.run = false; TM.left = 0; TM.done = true;
+  beep();
+  if(T.turns.length || T.busy) { render(); return; }
+  if(kickoff() && (T.motion || !MODES[T.mode].needsMotion)){ toast('Vorbereitung vorbei – die KI beginnt.'); await trainerStart(); }
+  else { T.note = T.mode==='prep' ? 'Vorbereitung vorbei. Schick jetzt deinen Case ab.' : T.mode==='switch' ? 'Vorbereitung vorbei. Schick jetzt deine Skizze für die Regierung ab.' : 'Vorbereitung vorbei.'; toast('Vorbereitung vorbei.'); render(); }
 }
 function tick(){
   const now = Date.now(); TM.left -= (now-TM.last)/1000; TM.last = now;
+  if(TM.run && TM.left<=0){ prepDone(); return; }
   const c = $('#clock'); if(c){ c.textContent = clockText(); c.className = 'clock'+(TM.left<=0?' over':TM.left<=30?' warn':''); }
   const b = $('#tbar'); if(b) b.style.width = Math.min(100,(1-Math.max(0,TM.left)/TM.dur)*100)+'%';
   const s = $('#clockSub'); if(s) s.textContent = clockSub();
 }
 function tmToggle(){
+  if(!TM.run && MODES[T.mode].needsMotion && !T.motion){ toast('Wähle zuerst eine Motion.'); return; }
+  if(!TM.run && sampleState==='none' && kickoff()){ toast('Der KI-Trainer ist in dieser Ansicht nicht verfügbar.'); }
   TM.run = !TM.run;
   if(TM.run){ TM.last = Date.now(); TM.iv = setInterval(tick, 250); } else { clearInterval(TM.iv); tick(); }
-  const g = $('#tmGo'); if(g) g.textContent = TM.run?'Pause':'Start';
+  render();
 }
-function tmSet(s){ clearInterval(TM.iv); TM.run = false; TM.dur = s; TM.left = s; render(); }
+function tmSet(s){ clearInterval(TM.iv); TM.run = false; TM.done = false; TM.dur = s; TM.left = s; render(); }
 
 /* =========================================================
    KI-Helfer für Dashboard & Fortschritt
@@ -1544,7 +1561,7 @@ document.addEventListener('click', async ev => {
       document.getElementById('pick_'+el.dataset.k).hidden = true; toast('Eingefügt und verknüpft.'); break;
     }
     // Trainer
-    case 'tmode': if(!T.turns.length){ T.mode = el.dataset.m; T.feedback = null; T.note=''; if(T.mode==='prep') tmSet(900); else render(); } break;
+    case 'tmode': if(!T.turns.length){ T.mode = el.dataset.m; T.feedback = null; T.note=''; render(); } break;
     case 'tside': { const s = el.dataset.s; T.side = s==='rand' ? (Math.random()<.5?'Pro':'Contra') : s; render(); break; }
     case 'trandom': { T.cat = $('#tCat').value; const pool = PRACTICE.filter(p=>!T.cat || p[0]===T.cat); const p = pool[Math.floor(Math.random()*pool.length)]; setMotion({title:p[1], category:p[0], src:'Übungsmotion', context:''}); break; }
     case 'tgen': T.cat = $('#tCat').value; generateMotion(); break;
@@ -1559,6 +1576,7 @@ document.addEventListener('click', async ev => {
     case 'ttasks': { (T.feedback.tasks||[]).forEach(t=>save('tasks', {text:t, done:false, source:'KI-Trainer'})); toast('Aufgaben übernommen.'); break; }
     case 'tmgo': tmToggle(); break;
     case 'tmreset': tmSet(TM.dur); break;
+    case 'tmskip': if(MODES[T.mode].needsMotion && !T.motion){ toast('Wähle zuerst eine Motion.'); break; } prepDone(); break;
     case 'tmset': tmSet(+el.dataset.s); break;
   }
 });
