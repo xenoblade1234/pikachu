@@ -382,6 +382,24 @@ const RESULTS = ['—','Gewonnen','Verloren','1. Platz','2. Platz','3. Platz','4
 const COLS = ['motions','journal','args','notes','assessments','goals','tasks','sessions'];
 const COL_NAME = {motions:'Motion',journal:'Journaleintrag',args:'Argument',notes:'Notiz',assessments:'Selbsteinschätzung',goals:'Ziel',tasks:'Aufgabe',sessions:'Trainingseinheit'};
 
+const PRACTICE_EN = [
+  ['Politik','THW introduce compulsory voting'],
+  ['Politik','THBT democracies should hand major policy decisions to citizens\' assemblies'],
+  ['Wirtschaft','THW introduce a universal basic income'],
+  ['Wirtschaft','THW legally mandate a four-day working week'],
+  ['Gesellschaft','THW ban social media for under-16s'],
+  ['Gesellschaft','THBT influencer culture has done more harm than good'],
+  ['Ethik & Philosophie','THBT we should separate the art from the artist'],
+  ['Ethik & Philosophie','THBT wealthy individuals have a moral duty to give away most of their wealth'],
+  ['Technologie','THW ban facial recognition technology in public spaces'],
+  ['Technologie','THBT the development of artificial general intelligence should be paused'],
+  ['Internationale Beziehungen','THW abolish the veto in the UN Security Council'],
+  ['Internationale Beziehungen','THBT the EU should create a common European army'],
+  ['Umwelt','THW ban domestic flights where a train journey under six hours exists'],
+  ['Umwelt','THBT climate activists are justified in using civil disobedience'],
+  ['Bildung','THW abolish grades in compulsory schooling'],
+  ['Bildung','THW make debating a compulsory school subject']
+];
 const PRACTICE = [
   ['Politik','DH würde eine Wahlpflicht einführen'],
   ['Politik','DH würde Volksabstimmungen auf Bundesebene verbindlich machen'],
@@ -1268,12 +1286,13 @@ function dArg(a){
   ${u.length ? `<section class="sec"><h5>Verwendet in</h5>${linkedList(u.map(([c,x])=>[c,x,fmtDate(x.date)]))}</section>` : '<p class="missing">Noch in keiner Motion oder Reflexion verwendet.</p>'}
   ${notesHtml('args', a)}`;
 }
-function feedbackHtml(fb, withActions){
+function feedbackHtml(fb, withActions, lang){
   if(!fb) return '';
+  const E = (lang||fb.lang)==='en';
   const list = (t,a)=> a && a.length ? `<div class="sec"><h5>${t}</h5><div class="prose"><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>` : '';
-  return `<div class="fb"><div class="panel-h"><h3>Feedback des Trainers</h3><span class="mono">Ø ${fmt1(ratingAvg(fb.scores))}</span></div>
+  return `<div class="fb"><div class="panel-h"><h3>${E?'Coach feedback':'Feedback des Trainers'}</h3><span class="mono">Ø ${fmt1(ratingAvg(fb.scores))}</span></div>
     ${fb.summary?`<p>${esc(fb.summary)}</p>`:''}
-    <div class="fb-grid">${list('Stärken',fb.strengths)}${list('Schwächen',fb.weaknesses)}${list('Fehlschlüsse',fb.fallacies)}${list('Übungen',fb.tasks)}</div>
+    <div class="fb-grid">${list(E?'Strengths':'Stärken',fb.strengths)}${list(E?'Weaknesses':'Schwächen',fb.weaknesses)}${list(E?'Fallacies':'Fehlschlüsse',fb.fallacies)}${list(E?'Exercises':'Übungen',fb.tasks)}</div>
     ${ratingsView(fb.scores)}
     ${withActions||''}</div>`;
 }
@@ -1296,7 +1315,7 @@ function dSimple(x, col){ return topBar(COL_NAME[col], x.text, delBtn(col,x.id))
 /* =========================================================
    KI-Trainer
    ========================================================= */
-const T = {mode:'duel', motion:null, side:'Pro', turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, cat:'', note:''};
+const T = {lang:'de', mode:'duel', motion:null, side:'Pro', turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, cat:'', note:''};
 const TM = {dur:900, left:900, run:false, iv:null, last:0, done:false};
 let sampleFn; let sampleState = 'unknown';
 async function getSample(){
@@ -1318,99 +1337,127 @@ function weakContext(){
 function rulesText(){
   const m = T.motion;
   const modeRules = {
-    duel:`Modus: Debatte gegen mich. Du vertrittst konsequent die Gegenseite (${sideName(opp())}). Nach der Vorbereitungszeit beginnst DU mit deiner ersten Rede, egal welche Seite im Format sonst eröffnet. Vertrittst du die Opposition, nimm in deiner ersten Rede die stärksten erwartbaren Regierungsargumente vorweg. Halte echte, starke Reden mit zwei bis drei Argumenten (These, Mechanismus, Impact) und widerlege meine Punkte direkt und konkret. Gib in diesem Modus KEIN Coaching-Feedback, sondern debattiere. Beende jede Rede mit einer scharfen Zwischenfrage an mich. Reden etwa 300–400 Wörter.`,
+    duel:`Modus: Debatte gegen mich. Du vertrittst konsequent die Gegenseite (${tSide(opp())}). Nach der Vorbereitungszeit beginnst DU mit deiner ersten Rede, egal welche Seite im Format sonst eröffnet. Vertrittst du die Opposition, nimm in deiner ersten Rede die stärksten erwartbaren Regierungsargumente vorweg. Halte echte, starke Reden mit zwei bis drei Argumenten (These, Mechanismus, Impact) und widerlege meine Punkte direkt und konkret. Gib in diesem Modus KEIN Coaching-Feedback, sondern debattiere. Beende jede Rede mit einer scharfen Zwischenfrage an mich. Reden etwa 300–400 Wörter.`,
     prep:`Modus: Vorbereitungs-Check. Ich habe 15 Minuten vorbereitet und schicke dir meinen Case für die Seite ${T.side}. Prüfe wie ein strenger Juror: Wo fehlen Mechanismen? Welche Gegenargumente habe ich übersehen? Welcher Clash entscheidet die Debatte? Was würde die Gegenseite zuerst angreifen? Stelle danach zwei bohrende Nachfragen.`,
     rebuttal:`Modus: Rebuttal-Drill. Präsentiere jeweils EIN starkes Argument der Gegenseite (${opp()}) mit Mechanismus und Beispiel (max. 120 Wörter). Ich widerlege. Bewerte meinen Rebuttal knapp: Welche Ebene habe ich angegriffen (nicht wahr / nicht kausal / nicht wichtig / nicht exklusiv / Turn)? Was hätte stärker gewirkt? Note 1–10. Bring dann sofort das nächste, schwierigere Argument.`,
     poi:`Modus: POI-Drill. Stelle mir jeweils EINE kurze, scharfe Zwischenfrage (max. 25 Wörter) gegen meine Seite (${T.side}). Ich antworte in ein bis zwei Sätzen. Bewerte jede Antwort in einer Zeile (Treffsicherheit, Ruhe, Rückführung auf mein Argument, Note 1–10) und stelle sofort die nächste, schwierigere Frage.`,
     check:`Modus: Argument-Check. Ich schicke dir ein einzelnes Argument. Analysiere: 1) Struktur (These, Mechanismus, Impact vorhanden?), 2) logische Lücken und Fehlschlüsse mit Namen, 3) den stärksten Angriff der Gegenseite, 4) wie ich das Argument härter mache, 5) Note 1–10. Sei streng.`,
     switch:`Modus: Seitenwechsel. Ich skizziere zuerst die stärkste Pro-Rede, danach die stärkste Contra-Rede. Nach der ersten Skizze: kurze Kritik und Aufforderung zur Gegenseite. Nach beiden: Welche Seite war stärker und warum? Wo habe ich Strohmänner gegen meine eigene Position gebaut? Welche Argumente fehlten auf der schwächeren Seite?`
   }[T.mode];
-  return `Du bist mein persönlicher Debattiertrainer und Juror (Formate BPS und OPD, Debattierklub Wien). Antworte auf Deutsch.
+  const langLine = T.lang==='en' ? `LANGUAGE: This whole session is in ENGLISH. Write every speech, question, rebuttal, evaluation and coaching note in English only, never in German. Use British Parliamentary terminology (Government, Opposition, PM, LO, POI, extension, weighing, clash). I will answer in English too; if my English contains errors that hurt clarity, briefly point out a better phrasing.\n` : '';
+  return `${langLine}Du bist mein persönlicher Debattiertrainer und Juror (Formate BPS und OPD, Debattierklub Wien). ${T.lang==='en'?'Antworte ausschließlich auf Englisch.':'Antworte auf Deutsch.'}
 Grundhaltung: kritisch, anspruchsvoll und fair. Stimme mir nicht zu, nur weil ich etwas behaupte. Benenne konkret unbelegte Behauptungen, fehlende Mechanismen, fehlende Impacts, logische Fehlschlüsse (mit Namen), fehlendes Weighing und übersehene Gegenargumente. Lob nur, wenn es verdient ist, und dann präzise.
 Halte Antworten kompakt (höchstens etwa 250 Wörter, außer du hältst eine Rede). Kurze Absätze, Aufzählungen mit "- ", Hervorhebungen mit **fett**. Keine Floskeln.
 ${modeRules}
 ${m ? `Motion: "${m.title}"${m.context?'\nKontext/Info-Slide: '+m.context:''}` : 'Keine bestimmte Motion vorgegeben.'}
-${m && (m.language==='Englisch' || /^(TH[WBR]?|THIS HOUSE|DH would)\b/i.test(m.title)) ? 'Dies ist eine englischsprachige Debatte: Halte Reden, Fragen und Bewertungen auf Englisch, gib Coaching-Hinweise aber zusätzlich kurz auf Deutsch.' : ''}
 ${T.mode==='check' ? '' : 'Meine Seite: '+T.side+'.'}
 ${weakContext()}`;
 }
 const sideName = s => s==='Pro' ? 'Regierung' : s==='Contra' ? 'Opposition' : s;
+const L = (de, en) => T.lang==='en' ? en : de;
+const tSide = s => L(sideName(s), s==='Pro' ? 'Government' : s==='Contra' ? 'Opposition' : s);
+const CAT_EN = {'Politik':'Politics','Wirtschaft':'Economics','Gesellschaft':'Society','Ethik & Philosophie':'Ethics & Philosophy','Technologie':'Technology','Internationale Beziehungen':'International Relations','Umwelt':'Environment','Bildung':'Education'};
+const MODES_EN = {
+  duel:{name:'Debate vs. AI', desc:'You argue your side, the AI takes the other side with real speeches, rebuttals and POIs.'},
+  prep:{name:'Prep sprint', desc:'Unseen motion, 15 minutes of prep. Then the AI takes your case apart.'},
+  rebuttal:{name:'Rebuttal drill', desc:'The AI brings strong arguments from the other side, you rebut. Every answer is scored.'},
+  poi:{name:'POI drill', desc:'Short, sharp points of information in a row. Trains quick thinking.'},
+  check:{name:'Argument check', desc:'Paste an argument. The AI checks mechanism, logic, fallacies and weighing.'},
+  switch:{name:'Side switch', desc:'First your strongest Government case, then your strongest Opposition case. The AI checks whether both are equally strong.'}
+};
+const modeName = k => L(MODES[k].name, MODES_EN[k].name);
+const modeDesc = k => L(MODES[k].desc, MODES_EN[k].desc);
+const SRC_EN = {'Übungsmotion':'Practice motion','Archiv':'My debates','KI-generiert':'AI-generated','Eigene':'Own','Fortgesetzt':'Resumed'};
+const srcLabel = x => L(x, SRC_EN[x]||x);
+function langFromMotion(m){ if(m && m.language==='Englisch') T.lang='en'; else if(m && m.language==='Deutsch') T.lang='de'; }
 function kickoff(){
+  if(T.lang==='en') return {duel:`Prep time is over. Deliver your first speech for the ${tSide(opp())} now.`, rebuttal:'Prep time is over. Give me the first argument.', poi:'Prep time is over. First point of information, please.'}[T.mode] || null;
   return {duel:`Die Vorbereitungszeit ist vorbei. Halte jetzt deine erste Rede für die ${sideName(opp())}.`, rebuttal:'Die Vorbereitungszeit ist vorbei. Bring das erste Argument.', poi:'Die Vorbereitungszeit ist vorbei. Erste Zwischenfrage bitte.'}[T.mode] || null;
 }
 function sysNote(){
+  if(T.lang==='en'){
+    const a = {duel:`Then the AI delivers its first speech for the ${tSide(opp())} and you respond.`, rebuttal:`Then the AI brings the first argument for the ${tSide(opp())}.`, poi:'Then the AI asks you the first point of information.', prep:'Then you send in your case for review.', switch:'Then you write your strongest Government case first.', check:''}[T.mode];
+    return T.mode==='check' ? 'Paste your argument and send it.' : 'Start the prep time. '+a+' You can already write notes in the input field.';
+  }
   const after = {duel:`Danach hält die KI ihre erste Rede für die ${sideName(opp())}, und du antwortest.`, rebuttal:`Danach bringt die KI das erste Argument der ${sideName(opp())}.`, poi:'Danach stellt dir die KI die erste Zwischenfrage.', prep:'Danach schickst du deinen Case zur Prüfung.', switch:'Danach schreibst du zuerst deine stärkste Skizze für die Regierung.', check:''}[T.mode];
   return T.mode==='check' ? 'Füge dein Argument ein und schick es ab.' : 'Starte die Vorbereitungszeit. '+after+' Notizen kannst du schon jetzt ins Eingabefeld schreiben.';
 }
 function msgHtml(t, streaming){
   if(t.role==='sys') return `<div class="msg sys">${esc(t.content)}</div>`;
-  if(t.role==='user') return `<div class="msg user"><div class="who">Du</div>${esc(t.content)}</div>`;
-  return `<div class="msg ai"${streaming?' id="streamMsg"':''}><div class="who">Trainer</div><div class="prose">${t.content ? md(t.content) : '<p class="muted">Denkt nach …</p>'}</div></div>`;
+  if(t.role==='user') return `<div class="msg user"><div class="who">${L('Du','You')}</div>${esc(t.content)}</div>`;
+  return `<div class="msg ai"${streaming?' id="streamMsg"':''}><div class="who">${L('Trainer','Coach')}</div><div class="prose">${t.content ? md(t.content) : `<p class="muted">${L('Denkt nach …','Thinking …')}</p>`}</div></div>`;
 }
 function vTrainer(){
   const m = T.motion, started = T.turns.length>0;
   const archive = S.motions.filter(isMine).sort(byDateDesc);
   const recentS = [...S.sessions].sort(byDateDesc).slice(0,5);
   const sample = sampleState;
+  const off = started ? 'disabled' : '';
+  const ph = {duel:L('Deine Rede oder Erwiderung …','Your speech or reply …'), check:L('Dein Argument …','Your argument …'), poi:L('Deine Antwort in ein bis zwei Sätzen …','Your answer in one or two sentences …')}[T.mode] || L('Deine Antwort …','Your answer …');
   return `
-  <header class="head"><div><div class="eyebrow">Modul D</div><h2>KI-Debattiertrainer</h2><p>Ein kritischer Sparringspartner, der deine Schwächen kennt. Er stimmt dir nicht einfach zu.</p></div>
-    <div class="actions">${started?`<button class="btn" data-act="tnew">Neue Einheit</button>`:''}</div></header>
-  ${sample==='none' ? `<div class="banner"><span>Der KI-Trainer braucht die Claude-Anbindung dieser Seite. Sie ist in dieser Ansicht nicht verfügbar. Motion-Auswahl und Timer funktionieren trotzdem.</span></div>` : ''}
+  <header class="head"><div><div class="eyebrow">${L('Modul D','Module D')}</div><h2>${L('KI-Debattiertrainer','AI Debate Coach')}</h2><p>${L('Ein kritischer Sparringspartner, der deine Schwächen kennt. Er stimmt dir nicht einfach zu.','A critical sparring partner who knows your weaknesses. It will not simply agree with you.')}</p></div>
+    <div class="actions">${started?`<button class="btn" data-act="tnew">${L('Neue Einheit','New session')}</button>`:''}</div></header>
+  ${sample==='none' ? `<div class="banner"><span>${L('Der KI-Trainer braucht die Claude-Anbindung dieser Seite. Sie ist in dieser Ansicht nicht verfügbar. Motion-Auswahl und Timer funktionieren trotzdem.','The AI coach needs this page\'s Claude connection, which is not available in this view. Motion selection and the timer still work.')}</span></div>` : ''}
   <div class="trainer">
     <div class="col">
       <section class="panel">
-        <div class="panel-h"><h3>Übungsform</h3></div>
-        <div class="modes">${Object.entries(MODES).map(([k,v])=>`<button class="mode ${T.mode===k?'on':''}" data-act="tmode" data-m="${k}" ${started?'disabled title="Starte eine neue Einheit, um die Übungsform zu wechseln"':''}>${v.name}</button>`).join('')}</div>
-        <p class="muted" style="font-size:13px">${MODES[T.mode].desc}</p>
+        <div class="panel-h"><h3>${L('Sprache','Language')}</h3></div>
+        <div class="seg" role="group" aria-label="Sprache / Language"><button data-act="tlang" data-l="de" class="${T.lang==='de'?'on':''}" ${off}>Deutsch</button><button data-act="tlang" data-l="en" class="${T.lang==='en'?'on':''}" ${off}>English</button></div>
+        <p class="muted" style="font-size:13px">${L('Die ganze Einheit läuft auf Deutsch.','The whole session runs in English: speeches, POIs, feedback and scoring.')}</p>
       </section>
       <section class="panel">
-        <div class="panel-h"><h3>Motion</h3>${m&&!m.motionId?`<button class="mini" data-act="tarchive">ins Archiv</button>`:''}</div>
-        ${m ? `<div class="motion-card"><span class="eyebrow">${esc(m.category||'')} · ${esc(m.src||'')}</span><span class="mt">${esc(m.title)}</span>${m.context?`<span class="muted" style="font-size:13px">${esc(m.context)}</span>`:''}</div>` : `<p class="empty">${T.mode==='check'?'Optional für den Argument-Check.':'Wähle eine Motion.'}</p>`}
-        <div class="inline-add"><select id="tCat" aria-label="Themengebiet"><option value="">Alle Themen</option>${CATS.map(c=>`<option ${T.cat===c?'selected':''}>${c}</option>`).join('')}</select><button class="btn" data-act="trandom" ${started?'disabled':''}>Zufällige Übungsmotion</button></div>
-        <div class="inline-add"><button class="btn ghost" data-act="tgen" ${started||sample==='none'?'disabled':''}>Neue Motion von der KI</button></div>
-        ${archive.length ? `<div class="inline-add"><select id="tArch" aria-label="Aus meinen Debatten" ${started?'disabled':''}><option value="">Aus meinen Debatten …</option>${archive.map(x=>`<option value="${x.id}">${esc(clip(x.title,70))}</option>`).join('')}</select></div>` : ''}
-        <div class="inline-add"><input type="text" id="tOwn" data-keep placeholder="Eigene Motion eingeben" aria-label="Eigene Motion" ${started?'disabled':''}><button class="btn" data-act="town" ${started?'disabled':''}>Übernehmen</button></div>
+        <div class="panel-h"><h3>${L('Übungsform','Exercise')}</h3></div>
+        <div class="modes">${Object.keys(MODES).map(k=>`<button class="mode ${T.mode===k?'on':''}" data-act="tmode" data-m="${k}" ${started?`disabled title="${L('Starte eine neue Einheit, um die Übungsform zu wechseln','Start a new session to switch exercise')}"`:''}>${modeName(k)}</button>`).join('')}</div>
+        <p class="muted" style="font-size:13px">${modeDesc(T.mode)}</p>
       </section>
-      ${T.mode!=='check' ? `<section class="panel"><div class="panel-h"><h3>Deine Seite</h3></div>
-        <div class="seg" role="group" aria-label="Seite">${['Pro','Contra'].map(s=>`<button data-act="tside" data-s="${s}" class="${T.side===s?'on':''}" ${started?'disabled':''}>${sideName(s)}</button>`).join('')}<button data-act="tside" data-s="rand" ${started?'disabled':''}>Zufall</button></div></section>` : ''}
+      <section class="panel">
+        <div class="panel-h"><h3>Motion</h3>${m&&!m.motionId?`<button class="mini" data-act="tarchive">${L('ins Archiv','save to archive')}</button>`:''}</div>
+        ${m ? `<div class="motion-card"><span class="eyebrow">${esc(m.category?L(m.category,CAT_EN[m.category]||m.category):'')} · ${esc(srcLabel(m.src||''))}</span><span class="mt">${esc(m.title)}</span>${m.context?`<span class="muted" style="font-size:13px">${esc(m.context)}</span>`:''}</div>` : `<p class="empty">${T.mode==='check'?L('Optional für den Argument-Check.','Optional for the argument check.'):L('Wähle eine Motion.','Choose a motion.')}</p>`}
+        <div class="inline-add"><select id="tCat" aria-label="${L('Themengebiet','Topic')}"><option value="">${L('Alle Themen','All topics')}</option>${CATS.map(c=>`<option value="${c}" ${T.cat===c?'selected':''}>${L(c,CAT_EN[c])}</option>`).join('')}</select><button class="btn" data-act="trandom" ${off}>${L('Zufällige Übungsmotion','Random practice motion')}</button></div>
+        <div class="inline-add"><button class="btn ghost" data-act="tgen" ${started||sample==='none'?'disabled':''}>${L('Neue Motion von der KI','New motion from the AI')}</button></div>
+        ${archive.length ? `<div class="inline-add"><select id="tArch" aria-label="${L('Aus meinen Debatten','From my debates')}" ${off}><option value="">${L('Aus meinen Debatten …','From my debates …')}</option>${archive.map(x=>`<option value="${x.id}">${esc(clip(x.title,70))}</option>`).join('')}</select></div>` : ''}
+        <div class="inline-add"><input type="text" id="tOwn" data-keep placeholder="${L('Eigene Motion eingeben','Enter your own motion')}" aria-label="${L('Eigene Motion','Own motion')}" ${off}><button class="btn" data-act="town" ${off}>${L('Übernehmen','Use')}</button></div>
+      </section>
+      ${T.mode!=='check' ? `<section class="panel"><div class="panel-h"><h3>${L('Deine Seite','Your side')}</h3></div>
+        <div class="seg" role="group" aria-label="${L('Seite','Side')}">${['Pro','Contra'].map(x=>`<button data-act="tside" data-s="${x}" class="${T.side===x?'on':''}" ${off}>${tSide(x)}</button>`).join('')}<button data-act="tside" data-s="rand" ${off}>${L('Zufall','Random')}</button></div></section>` : ''}
       <section class="panel timer">
-        <div class="panel-h"><h3>Vorbereitungszeit</h3><span class="eyebrow" id="tmLabel">${started?'läuft nicht mehr':TM.run?'läuft':'bereit'}</span></div>
+        <div class="panel-h"><h3>${L('Vorbereitungszeit','Prep time')}</h3><span class="eyebrow" id="tmLabel">${started?L('läuft nicht mehr','finished'):TM.run?L('läuft','running'):L('bereit','ready')}</span></div>
         <div class="clock" id="clock">${clockText()}</div>
         <div class="tbar"><i id="tbar" style="width:${(1-TM.left/TM.dur)*100}%"></i></div>
         <div class="clock-sub" id="clockSub">${clockSub()}</div>
-        <div class="toolbar" style="justify-content:center"><button class="btn primary" data-act="tmgo" id="tmGo" ${started?'disabled':''}>${TM.run?'Pause':TM.left<TM.dur?'Weiter':'Vorbereitung starten'}</button><button class="btn" data-act="tmreset" ${started?'disabled':''}>Zurücksetzen</button></div>
-        <div class="chips" style="justify-content:center">${[[900,'15:00'],[600,'10:00'],[300,'5:00'],[60,'1:00']].map(([s,l])=>`<button class="chip ${TM.dur===s?'on':''}" data-act="tmset" data-s="${s}" ${started||TM.run?'disabled':''}>${l}</button>`).join('')}</div>
-        ${!started && !TM.done && T.mode!=='check' ? `<div class="toolbar" style="justify-content:center"><button class="mini" data-act="tmskip">Vorbereitung überspringen</button></div>` : ''}
+        <div class="toolbar" style="justify-content:center"><button class="btn primary" data-act="tmgo" id="tmGo" ${off}>${TM.run?L('Pause','Pause'):TM.left<TM.dur?L('Weiter','Resume'):L('Vorbereitung starten','Start prep')}</button><button class="btn" data-act="tmreset" ${off}>${L('Zurücksetzen','Reset')}</button></div>
+        <div class="chips" style="justify-content:center">${[[900,'15:00'],[600,'10:00'],[300,'5:00'],[60,'1:00']].map(([x,l])=>`<button class="chip ${TM.dur===x?'on':''}" data-act="tmset" data-s="${x}" ${started||TM.run?'disabled':''}>${l}</button>`).join('')}</div>
+        ${!started && !TM.done && T.mode!=='check' ? `<div class="toolbar" style="justify-content:center"><button class="mini" data-act="tmskip">${L('Vorbereitung überspringen','Skip prep')}</button></div>` : ''}
       </section>
     </div>
     <div class="col">
       <section class="panel">
-        <div class="panel-h"><h3>${esc(MODES[T.mode].name)}</h3><span class="toolbar">${T.mode!=='check'&&m?posChip(T.side):''}</span></div>
+        <div class="panel-h"><h3>${esc(modeName(T.mode))}</h3><span class="toolbar">${T.lang==='en'?'<span class="chip">EN</span>':''}${T.mode!=='check'&&m?`<span class="chip ${T.side==='Pro'?'pro':'contra'}">${tSide(T.side)}</span>`:''}</span></div>
         <div class="chat" id="chat">
-          ${!started ? `<div class="msg sys">${esc(MODES[T.mode].needsMotion&&!m ? 'Wähle links eine Motion und starte dann.' : 'Bereit. '+(sysNote()||''))}</div>` : ''}
+          ${!started ? `<div class="msg sys">${esc(MODES[T.mode].needsMotion&&!m ? L('Wähle links eine Motion und starte dann.','Choose a motion on the left, then start.') : L('Bereit. ','Ready. ')+(sysNote()||''))}</div>` : ''}
           ${T.turns.filter(t=>!t.hidden).map(t=>msgHtml(t)).join('')}
           ${T.busy ? msgHtml({role:'assistant',content:T.stream||''}, true) : ''}
           ${T.note ? `<div class="msg sys">${esc(T.note)}</div>` : ''}
         </div>
         <div class="composer">
-          <textarea id="tInput" data-keep placeholder="${T.mode==='duel'?'Deine Rede oder Erwiderung …':T.mode==='check'?'Dein Argument …':T.mode==='poi'?'Deine Antwort in ein bis zwei Sätzen …':'Deine Antwort …'}" aria-label="Deine Eingabe" ${(MODES[T.mode].needsMotion&&!m)?'disabled':''}></textarea>
+          <textarea id="tInput" data-keep placeholder="${ph}" aria-label="${L('Deine Eingabe','Your input')}" ${(MODES[T.mode].needsMotion&&!m)?'disabled':''}></textarea>
           <div class="row-b">
             <span class="faint" style="font-size:12px" id="wc"></span>
-            <span class="toolbar">${T.busy?`<button class="btn" data-act="tstop">Stopp</button>`:''}<button class="btn primary" data-act="tsend" ${T.busy||sample==='none'||(MODES[T.mode].needsMotion&&!m)?'disabled':''}>Senden</button></span>
+            <span class="toolbar">${T.busy?`<button class="btn" data-act="tstop">${L('Stopp','Stop')}</button>`:''}<button class="btn primary" data-act="tsend" ${T.busy||sample==='none'||(MODES[T.mode].needsMotion&&!m)?'disabled':''}>${L('Senden','Send')}</button></span>
           </div>
         </div>
-        ${started ? `<div class="toolbar"><button class="btn" data-act="tfeedback" ${T.busy||T.fbBusy||sample==='none'?'disabled':''}>${T.fbBusy?'Bewertung läuft …':'Feedback & Bewertung'}</button><button class="btn" data-act="tsave" ${T.busy?'disabled':''}>${T.sessionId?'Einheit aktualisieren':'Einheit speichern'}</button></div>` : ''}
-        ${T.feedback ? feedbackHtml(T.feedback, `<div class="toolbar">${T.feedback.tasks&&T.feedback.tasks.length?`<button class="btn" data-act="ttasks">Übungen als Aufgaben übernehmen</button>`:''}<span class="faint" style="font-size:12px">Beim Speichern fließt die Bewertung in deinen Fortschritt ein.</span></div>`) : ''}
+        ${started ? `<div class="toolbar"><button class="btn" data-act="tfeedback" ${T.busy||T.fbBusy||sample==='none'?'disabled':''}>${T.fbBusy?L('Bewertung läuft …','Scoring …'):L('Feedback & Bewertung','Feedback & score')}</button><button class="btn" data-act="tsave" ${T.busy?'disabled':''}>${T.sessionId?L('Einheit aktualisieren','Update session'):L('Einheit speichern','Save session')}</button></div>` : ''}
+        ${T.feedback ? feedbackHtml(T.feedback, `<div class="toolbar">${T.feedback.tasks&&T.feedback.tasks.length?`<button class="btn" data-act="ttasks">${L('Übungen als Aufgaben übernehmen','Add exercises as tasks')}</button>`:''}<span class="faint" style="font-size:12px">${L('Beim Speichern fließt die Bewertung in deinen Fortschritt ein.','When you save, the score is added to your progress.')}</span></div>`, T.lang) : ''}
       </section>
       <section class="panel">
-        <div class="panel-h"><h3>Letzte Einheiten</h3></div>
-        ${recentS.length ? `<div class="rows">${recentS.map(s=>`<button class="row" data-act="open" data-col="sessions" data-id="${s.id}"><span class="d">${fmtShort(s.date)}</span><span class="t">${esc(clip(itemTitle('sessions',s),90))}</span><span class="m">${s.feedback?`<span class="chip">Ø ${fmt1(ratingAvg(s.feedback.scores))}</span>`:''}${exChip(s)}</span></button>`).join('')}</div>` : '<p class="empty">Gespeicherte Einheiten erscheinen hier und fließen in deinen Fortschritt ein.</p>'}
+        <div class="panel-h"><h3>${L('Letzte Einheiten','Recent sessions')}</h3></div>
+        ${recentS.length ? `<div class="rows">${recentS.map(x=>`<button class="row" data-act="open" data-col="sessions" data-id="${x.id}"><span class="d">${fmtShort(x.date)}</span><span class="t">${esc(clip(itemTitle('sessions',x),90))}</span><span class="m">${x.lang==='en'?'<span class="chip">EN</span>':''}${x.feedback?`<span class="chip">Ø ${fmt1(ratingAvg(x.feedback.scores))}</span>`:''}${exChip(x)}</span></button>`).join('')}</div>` : `<p class="empty">${L('Gespeicherte Einheiten erscheinen hier und fließen in deinen Fortschritt ein.','Saved sessions appear here and count towards your progress.')}</p>`}
       </section>
     </div>
   </div>`;
 }
 function afterTrainerRender(){ const c = $('#chat'); if(c && (T.busy || T.justSent)){ c.lastElementChild && c.lastElementChild.scrollIntoView({block:'nearest'}); T.justSent = false; } updateWc(); }
-function updateWc(){ const i = $('#tInput'), w = $('#wc'); if(i && w){ const n = i.value.trim() ? i.value.trim().split(/\s+/).length : 0; w.textContent = n ? n+' Wörter · ca. '+Math.max(1,Math.round(n/130))+' Min. gesprochen' : ''; } }
+function updateWc(){ const i = $('#tInput'), w = $('#wc'); if(i && w){ const n = i.value.trim() ? i.value.trim().split(/\s+/).length : 0; w.textContent = n ? (T.lang==='en' ? n+' words · approx. '+Math.max(1,Math.round(n/130))+' min spoken' : n+' Wörter · ca. '+Math.max(1,Math.round(n/130))+' Min. gesprochen') : ''; } }
 function setMotion(mo){ T.motion = mo; T.note = ''; render(); }
 function resetTrainer(){ if(T.ctl) T.ctl.abort(); clearInterval(TM.iv); Object.assign(TM, {run:false, done:false, left:TM.dur}); Object.assign(T, {turns:[], busy:false, ctl:null, feedback:null, fbBusy:false, sessionId:null, stream:'', note:''}); render(); }
 
@@ -1425,7 +1472,7 @@ async function callTrainer(){
   try{
     const res = await sample(input, {cache:false, signal:T.ctl.signal, onText:({text})=>{ T.stream = text; const el = document.querySelector('#streamMsg .prose'); if(el){ el.innerHTML = md(text); } }});
     T.turns.push({role:'assistant', content:res.text});
-    if(res.truncated) T.note = 'Antwort wurde gekürzt.';
+    if(res.truncated) T.note = L('Antwort wurde gekürzt.','The answer was cut short.');
   }catch(e){
     if(e && e.text && e.code!=='refused') T.turns.push({role:'assistant', content:e.text});
     if(!(e && e.code==='cancelled')) T.note = errMsg(e);
@@ -1457,7 +1504,7 @@ async function trainerFeedback(){
   T.fbBusy = true; render();
   const keys = SKILLS.map(s=>s[0]);
   const prompt = `Du bist ein strenger Debatten-Juror. Bewerte ausschließlich MEINE Beiträge (mit "ICH:" markiert) in diesem Trainingsverlauf.
-Übungsform: ${MODES[T.mode].name}. ${T.motion?'Motion: "'+T.motion.title+'". ':''}${T.mode!=='check'?'Meine Seite: '+T.side+'.':''}
+${T.lang==='en'?'The session was held in English. Write ALL text fields (summary, strengths, weaknesses, fallacies, tasks) in English, and also judge my English expression as part of rhetoric.\n':''}Übungsform: ${MODES[T.mode].name}. ${T.motion?'Motion: "'+T.motion.title+'". ':''}${T.mode!=='check'?'Meine Seite: '+T.side+'.':''}
 ${weakContext()}
 
 VERLAUF:
@@ -1465,12 +1512,12 @@ ${transcript}
 
 Antworte NUR mit einem JSON-Objekt in genau dieser Form:
 {"summary":"2-3 Sätze Gesamturteil","strengths":["…"],"weaknesses":["…"],"fallacies":["Name des Fehlschlusses: wo genau"],"scores":{${keys.map(k=>`"${k}":0`).join(',')}},"tasks":["konkrete Übung für die nächste Woche"]}
-Scores von 1 bis 10; 0 für Kompetenzen, die in diesem Verlauf nicht beurteilbar sind. Maßstab: 5 = Anfänger, 7 = solide Clubleistung, 9+ nur für Turnierniveau. Sei kritisch und konkret, höchstens je 4 Punkte pro Liste, Deutsch.`;
+Scores von 1 bis 10; 0 für Kompetenzen, die in diesem Verlauf nicht beurteilbar sind. Maßstab: 5 = Anfänger, 7 = solide Clubleistung, 9+ nur für Turnierniveau. Sei kritisch und konkret, höchstens je 4 Punkte pro Liste, ${T.lang==='en'?'auf Englisch':'Deutsch'}.`;
   try{
     const fb = await sample.json(prompt, {cache:false});
     const sc = {}; keys.forEach(k=>{ const v = Math.round(+((fb&&fb.scores)||{})[k]||0); sc[k] = Math.max(0, Math.min(10, v)); });
     const arr = a => Array.isArray(a) ? a.map(String).filter(Boolean).slice(0,6) : [];
-    T.feedback = {summary:String(fb&&fb.summary||''), strengths:arr(fb&&fb.strengths), weaknesses:arr(fb&&fb.weaknesses), fallacies:arr(fb&&fb.fallacies), tasks:arr(fb&&fb.tasks), scores:sc};
+    T.feedback = {lang:T.lang, summary:String(fb&&fb.summary||''), strengths:arr(fb&&fb.strengths), weaknesses:arr(fb&&fb.weaknesses), fallacies:arr(fb&&fb.fallacies), tasks:arr(fb&&fb.tasks), scores:sc};
   }catch(e){ T.note = errMsg(e); if(isGone(e)) sampleState = 'none'; }
   T.fbBusy = false; render();
 }
@@ -1479,28 +1526,28 @@ async function trainerSave(){
   let turns = T.turns.filter(t=>t.role!=='sys');
   let total = 0; const kept = [];
   for(let i=turns.length-1;i>=0;i--){ total += turns[i].content.length; if(total>150000) break; kept.unshift(turns[i]); }
-  const it = await save('sessions', Object.assign({}, prev||{}, {id:T.sessionId||undefined, date:prev?prev.date:today(), mode:T.mode, motion:T.motion?T.motion.title:'', motionId:T.motion&&T.motion.motionId||'', category:T.motion&&T.motion.category||'', side:T.mode==='check'?'':T.side, turns:kept, feedback:T.feedback||null}));
+  const it = await save('sessions', Object.assign({}, prev||{}, {id:T.sessionId||undefined, date:prev?prev.date:today(), mode:T.mode, motion:T.motion?T.motion.title:'', motionId:T.motion&&T.motion.motionId||'', category:T.motion&&T.motion.category||'', side:T.mode==='check'?'':T.side, lang:T.lang, turns:kept, feedback:T.feedback||null}));
   T.sessionId = it.id; toast('Einheit gespeichert.'); render();
 }
 
 /* Timer */
 function clockText(){ const s = Math.max(0, Math.ceil(TM.left)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function clockSub(){
-  if(TM.done || TM.left<=0) return 'Vorbereitung vorbei';
-  if(!TM.run && TM.left===TM.dur) return 'Die KI beginnt, sobald die Zeit abläuft';
+  if(TM.done || TM.left<=0) return L('Vorbereitung vorbei','Prep is over');
+  if(!TM.run && TM.left===TM.dur) return L('Die KI beginnt, sobald die Zeit abläuft','The AI starts as soon as time runs out');
   const f = (TM.dur-TM.left)/TM.dur;
-  if(f<0.2) return 'Ideen sammeln · Stakeholder notieren';
-  if(f<0.53) return 'Clash & Linie festlegen';
-  if(f<0.87) return 'Argumente ausformulieren';
-  return 'Gegenargumente vorwegnehmen';
+  if(f<0.2) return L('Ideen sammeln · Stakeholder notieren','Brainstorm · list stakeholders');
+  if(f<0.53) return L('Clash & Linie festlegen','Set the clash and your line');
+  if(f<0.87) return L('Argumente ausformulieren','Build your arguments');
+  return L('Gegenargumente vorwegnehmen','Pre-empt the other side');
 }
 function beep(){ try{ const C = window.AudioContext||window.webkitAudioContext; const ctx = new C(); [0,0.25].forEach(d=>{ const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.15, ctx.currentTime+d); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+d+0.2); o.connect(g).connect(ctx.destination); o.start(ctx.currentTime+d); o.stop(ctx.currentTime+d+0.22); }); }catch(e){} }
 async function prepDone(){
   clearInterval(TM.iv); TM.run = false; TM.left = 0; TM.done = true;
   beep();
   if(T.turns.length || T.busy) { render(); return; }
-  if(kickoff() && (T.motion || !MODES[T.mode].needsMotion)){ toast('Vorbereitung vorbei – die KI beginnt.'); await trainerStart(); }
-  else { T.note = T.mode==='prep' ? 'Vorbereitung vorbei. Schick jetzt deinen Case ab.' : T.mode==='switch' ? 'Vorbereitung vorbei. Schick jetzt deine Skizze für die Regierung ab.' : 'Vorbereitung vorbei.'; toast('Vorbereitung vorbei.'); render(); }
+  if(kickoff() && (T.motion || !MODES[T.mode].needsMotion)){ toast(L('Vorbereitung vorbei – die KI beginnt.','Prep is over – the AI starts.')); await trainerStart(); }
+  else { T.note = T.mode==='prep' ? L('Vorbereitung vorbei. Schick jetzt deinen Case ab.','Prep is over. Send in your case now.') : T.mode==='switch' ? L('Vorbereitung vorbei. Schick jetzt deine Skizze für die Regierung ab.','Prep is over. Send your Government case now.') : L('Vorbereitung vorbei.','Prep is over.'); toast(L('Vorbereitung vorbei.','Prep is over.')); render(); }
 }
 function tick(){
   const now = Date.now(); TM.left -= (now-TM.last)/1000; TM.last = now;
@@ -1572,13 +1619,16 @@ ${data}`, {cache:false});
 }
 async function generateMotion(){
   const sample = await getSample(); if(!sample){ toast('Die KI ist hier nicht verfügbar.'); return; }
-  T.note = 'Die KI formuliert eine Motion …'; render();
+  T.note = L('Die KI formuliert eine Motion …','The AI is writing a motion …'); render();
   try{
     const cat = T.cat || CATS[Math.floor(Math.random()*CATS.length)];
-    const r = await sample.json(`Formuliere eine anspruchsvolle, ausgewogene Debatten-Motion im Stil des Debattierklubs Wien (beginnt mit "DH" für "Dieses Haus") zum Themengebiet "${cat}". Beide Seiten müssen gut vertretbar sein. Vermeide diese bereits bekannten Motions: ${S.motions.slice(0,20).map(m=>m.title).join('; ')}.
+    const r = T.lang==='en'
+      ? await sample.json(`Write one challenging, balanced debate motion in British Parliamentary style, in English, starting with "THW", "THBT", "THR" or "TH" (This House), on the topic area "${CAT_EN[cat]||cat}". Both sides must be clearly arguable. Avoid these existing motions: ${S.motions.slice(0,20).map(m=>m.title).join('; ')}.
+Reply ONLY with JSON: {"title":"TH …","context":"info slide in 1-2 sentences in English, only if needed, otherwise empty"}`, {modelTier:'quick', cache:false})
+      : await sample.json(`Formuliere eine anspruchsvolle, ausgewogene Debatten-Motion im Stil des Debattierklubs Wien (beginnt mit "DH" für "Dieses Haus") zum Themengebiet "${cat}". Beide Seiten müssen gut vertretbar sein. Vermeide diese bereits bekannten Motions: ${S.motions.slice(0,20).map(m=>m.title).join('; ')}.
 Antworte NUR mit JSON: {"title":"DH …","context":"Info-Slide in 1-2 Sätzen, nur falls nötig, sonst leer"}`, {modelTier:'quick', cache:false});
-    if(r && r.title) setMotion({title:String(r.title), context:String(r.context||''), category:cat, src:'KI-generiert'});
-    else { T.note = 'Keine Motion erhalten.'; render(); }
+    if(r && r.title) setMotion({title:String(r.title), context:String(r.context||''), category:cat, language:T.lang==='en'?'Englisch':'Deutsch', src:'KI-generiert'});
+    else { T.note = L('Keine Motion erhalten.','No motion received.'); render(); }
   }catch(e){ T.note = errMsg(e); render(); }
 }
 
@@ -1655,9 +1705,9 @@ document.addEventListener('click', async ev => {
       toast('Nachtrag gespeichert.'); break;
     }
     case 'reflect': openSheet({kind:'edit', col:'journal', id:null, preset:{motionId:id, date:get('motions',id)?.date||today(), position:get('motions',id)?.position==='Contra'?'Contra':'Pro', role:get('motions',id)?.role||''}}); break;
-    case 'trainmotion': { const m = get('motions',id); if(!m) break; closeSheet(); resetTrainer(); T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, language:m.language||'', src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; go('trainer'); break; }
+    case 'trainmotion': { const m = get('motions',id); if(!m) break; closeSheet(); resetTrainer(); T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, language:m.language||'', src:'Archiv', motionId:m.id}; langFromMotion(m); if(m.position==='Pro'||m.position==='Contra') T.side = m.position; go('trainer'); break; }
     case 'trainarg': { const ar = get('args',id); if(!ar) break; closeSheet(); resetTrainer(); T.mode = 'check'; go('trainer'); setTimeout(()=>{ const i = $('#tInput'); if(i){ i.value = [ar.title, ar.claim&&'These: '+ar.claim, ar.reasoning&&'Mechanismus: '+ar.reasoning, ar.evidence&&'Beleg: '+ar.evidence, ar.impact&&'Impact: '+ar.impact].filter(Boolean).join('\n'); updateWc(); i.focus(); } }, 50); break; }
-    case 'resume': { const s = get('sessions',id); if(!s) break; closeSheet(); if(T.ctl) T.ctl.abort(); Object.assign(T, {mode:s.mode||'duel', side:s.side||'Pro', motion:s.motion?{title:s.motion, category:s.category||'', src:'Fortgesetzt', motionId:s.motionId||''}:null, turns:(s.turns||[]).slice(), feedback:s.feedback||null, sessionId:s.id, busy:false, note:''}); go('trainer'); break; }
+    case 'resume': { const s = get('sessions',id); if(!s) break; closeSheet(); if(T.ctl) T.ctl.abort(); Object.assign(T, {lang:s.lang||'de', mode:s.mode||'duel', side:s.side||'Pro', motion:s.motion?{title:s.motion, category:s.category||'', src:'Fortgesetzt', motionId:s.motionId||''}:null, turns:(s.turns||[]).slice(), feedback:s.feedback||null, sessionId:s.id, busy:false, note:''}); go('trainer'); break; }
     case 'toggleskill': { const k = el.dataset.k; ui.pf.on.has(k) ? ui.pf.on.delete(k) : ui.pf.on.add(k); render(); break; }
     case 'analyze': analyzePatterns(); break;
     case 'reviewai': reviewDebate(id); break;
@@ -1688,7 +1738,8 @@ document.addEventListener('click', async ev => {
     // Trainer
     case 'tmode': if(!T.turns.length){ T.mode = el.dataset.m; T.feedback = null; T.note=''; render(); } break;
     case 'tside': { const s = el.dataset.s; T.side = s==='rand' ? (Math.random()<.5?'Pro':'Contra') : s; render(); break; }
-    case 'trandom': { T.cat = $('#tCat').value; const pool = PRACTICE.filter(p=>!T.cat || p[0]===T.cat); const p = pool[Math.floor(Math.random()*pool.length)]; setMotion({title:p[1], category:p[0], src:'Übungsmotion', context:''}); break; }
+    case 'trandom': { T.cat = $('#tCat').value; const src = T.lang==='en' ? PRACTICE_EN : PRACTICE; const pool = src.filter(p=>!T.cat || p[0]===T.cat); const p = pool[Math.floor(Math.random()*pool.length)] || src[0]; setMotion({title:p[1], category:p[0], language:T.lang==='en'?'Englisch':'Deutsch', src:'Übungsmotion', context:''}); break; }
+    case 'tlang': if(!T.turns.length){ T.lang = el.dataset.l; if(T.motion && T.motion.src==='Übungsmotion') T.motion = null; T.note=''; render(); } break;
     case 'tgen': T.cat = $('#tCat').value; generateMotion(); break;
     case 'town': { const i = $('#tOwn'); const t = i.value.trim(); if(!t){ i.focus(); break; } i.value=''; setMotion({title:t, category:'', src:'Eigene', context:''}); break; }
     case 'tarchive': { if(!T.motion) break; const it = await save('motions', {title:T.motion.title, category:T.motion.category||'', definition:T.motion.context||'', date:today(), position:T.side, language:T.motion.language||'', participated:'Nein', insights:'', tags:['Training']}); T.motion.motionId = it.id; T.motion.src = 'Archiv'; toast('Motion ins Archiv übernommen.'); render(); break; }
@@ -1738,7 +1789,7 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const el = ev.target;
   if(el.id==='f_motionId'){ const n = $('#f_newMotion'); if(n){ n.hidden = el.value!=='__new'; if(!n.hidden) n.focus(); } const m = get('motions', el.value); if(m && !ui.sheet.id){ const p = $('#f_position'); if(p && (m.position==='Pro'||m.position==='Contra')) p.value = m.position; const r = $('#f_role'); if(r && !r.value && m.role) r.value = m.role; } }
-  if(el.id==='tArch' && el.value){ const m = get('motions', el.value); if(m){ T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, language:m.language||'', src:'Archiv', motionId:m.id}; if(m.position==='Pro'||m.position==='Contra') T.side = m.position; T.note=''; render(); } }
+  if(el.id==='tArch' && el.value){ const m = get('motions', el.value); if(m){ T.motion = {title:m.title, context:m.definition?clip(m.definition,400):'', category:m.category, language:m.language||'', src:'Archiv', motionId:m.id}; langFromMotion(m); if(m.position==='Pro'||m.position==='Contra') T.side = m.position; T.note=''; render(); } }
   if(el.id==='tCat') T.cat = el.value;
   if(el.id==='importFile' && el.files && el.files[0]){ handleImport(el.files[0]); el.value = ''; }
 });
