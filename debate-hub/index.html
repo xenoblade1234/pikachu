@@ -671,7 +671,8 @@ function render(){
 }
 function renderNav(){
   const counts = {mine:S.motions.filter(isMine).length, motions:S.motions.length, journal:S.journal.length, library:S.args.length, trainer:S.sessions.length};
-  $('#nav').innerHTML = ROUTES.map(([k,l])=>`<button data-act="go" data-r="${k}" class="${ui.route===k?'on':''}" ${ui.route===k?'aria-current="page"':''}><span class="lbl">${l}</span>${counts[k]!=null?`<span class="cnt">${counts[k]}</span>`:''}</button>`).join('');
+  const HIDDEN_TABS = ['motions','journal']; // vorerst ausgeblendet, Ansichten bleiben über Links erreichbar
+  $('#nav').innerHTML = ROUTES.filter(([k])=>!HIDDEN_TABS.includes(k) || ui.route===k).map(([k,l])=>`<button data-act="go" data-r="${k}" class="${ui.route===k?'on':''}" ${ui.route===k?'aria-current="page"':''}><span class="lbl">${l}</span>${counts[k]!=null?`<span class="cnt">${counts[k]}</span>`:''}</button>`).join('');
 }
 function loadingNote(){ return store.mode==='init' || (store.mode==='db' && store.loaded.size<COLS.length && !store.slow) ? '<p class="empty">Lade deine Einträge …</p>' : ''; }
 
