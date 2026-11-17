@@ -1267,7 +1267,7 @@ function msgHtml(t, streaming){
 }
 function vTrainer(){
   const m = T.motion, started = T.turns.length>0;
-  const archive = [...S.motions].sort(byDateDesc);
+  const archive = S.motions.filter(isMine).sort(byDateDesc);
   const recentS = [...S.sessions].sort(byDateDesc).slice(0,5);
   const sample = sampleState;
   return `
@@ -1286,7 +1286,7 @@ function vTrainer(){
         ${m ? `<div class="motion-card"><span class="eyebrow">${esc(m.category||'')} · ${esc(m.src||'')}</span><span class="mt">${esc(m.title)}</span>${m.context?`<span class="muted" style="font-size:13px">${esc(m.context)}</span>`:''}</div>` : `<p class="empty">${T.mode==='check'?'Optional für den Argument-Check.':'Wähle eine Motion.'}</p>`}
         <div class="inline-add"><select id="tCat" aria-label="Themengebiet"><option value="">Alle Themen</option>${CATS.map(c=>`<option ${T.cat===c?'selected':''}>${c}</option>`).join('')}</select><button class="btn" data-act="trandom" ${started?'disabled':''}>Zufällige Übungsmotion</button></div>
         <div class="inline-add"><button class="btn ghost" data-act="tgen" ${started||sample==='none'?'disabled':''}>Neue Motion von der KI</button></div>
-        ${archive.length ? `<div class="inline-add"><select id="tArch" aria-label="Aus dem Archiv" ${started?'disabled':''}><option value="">Aus meinem Archiv …</option>${archive.map(x=>`<option value="${x.id}">${esc(clip(x.title,70))}</option>`).join('')}</select></div>` : ''}
+        ${archive.length ? `<div class="inline-add"><select id="tArch" aria-label="Aus meinen Debatten" ${started?'disabled':''}><option value="">Aus meinen Debatten …</option>${archive.map(x=>`<option value="${x.id}">${esc(clip(x.title,70))}</option>`).join('')}</select></div>` : ''}
         <div class="inline-add"><input type="text" id="tOwn" data-keep placeholder="Eigene Motion eingeben" aria-label="Eigene Motion" ${started?'disabled':''}><button class="btn" data-act="town" ${started?'disabled':''}>Übernehmen</button></div>
       </section>
       ${T.mode!=='check' ? `<section class="panel"><div class="panel-h"><h3>Deine Seite</h3></div>
