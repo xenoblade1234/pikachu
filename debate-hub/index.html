@@ -21,6 +21,10 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+select,input,textarea{max-width:100%}
+.inline-add>*,.toolbar>*{min-width:0}
+.inline-add select{flex:1 1 160px;text-overflow:ellipsis}
+.panel,.col,.motion-card,.chat,.composer{min-width:0}
 html,body{background:var(--bg);color:var(--ink)}
 body{font-family:var(--f-ui);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
